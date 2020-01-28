@@ -3,7 +3,7 @@ apply plugin: "java"
 sourceCompatibility = 1.8
 [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 
-sourceSets.main.java.srcDirs = [ "src/" ]
+sourceSets.main.java.srcDirs = ["src/"]
 
 dependencies {
     compile 'com.fazecast:jSerialComm:[2.0.0,3.0.0)'

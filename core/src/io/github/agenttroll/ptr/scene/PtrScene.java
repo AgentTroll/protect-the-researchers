@@ -5,12 +5,19 @@ import com.badlogic.gdx.scenes.scene2d.Stage;
 import io.github.agenttroll.ptr.action.DescendAction;
 import io.github.agenttroll.ptr.action.SpawnAction;
 import io.github.agenttroll.ptr.actor.ArrowActor;
+import io.github.agenttroll.ptr.comm.Remote;
+import io.github.agenttroll.ptr.game.PtrListener;
 
 import static com.badlogic.gdx.scenes.scene2d.actions.Actions.run;
 import static com.badlogic.gdx.scenes.scene2d.actions.Actions.sequence;
 
 public class PtrScene extends SplitScene {
-    public PtrScene() {
+    private final Remote remote;
+
+    public PtrScene(Remote remote) {
+        this.remote = remote;
+        this.remote.addListener(new PtrListener());
+
         this.addArrowToStage(this.getLeft());
         this.addArrowToStage(this.getRight());
     }

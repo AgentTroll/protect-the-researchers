@@ -7,29 +7,33 @@ import io.github.agenttroll.ptr.comm.Remote;
 import io.github.agenttroll.ptr.scene.PtrScene;
 
 public class ProtectTheResearchers extends ApplicationAdapter {
-	private PtrScene scene;
+    private final Remote remote;
+    private PtrScene scene;
 
-	@Override
-	public void create() {
-		this.scene = new PtrScene();
+    public ProtectTheResearchers(String remotePortId) {
+        this.remote = new Remote(remotePortId);
+    }
 
-		Remote remote = new Remote();
-	}
+    @Override
+    public void create() {
+        this.scene = new PtrScene(this.remote);
+    }
 
-	@Override
-	public void resize(int width, int height) {
-		this.scene.resize(width, height);
-	}
+    @Override
+    public void resize(int width, int height) {
+        this.scene.resize(width, height);
+    }
 
-	@Override
-	public void render() {
-		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+    @Override
+    public void render() {
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-		this.scene.render();
-	}
-	
-	@Override
-	public void dispose() {
-	    this.scene.dispose();
-	}
+        this.scene.render();
+    }
+
+    @Override
+    public void dispose() {
+        this.scene.dispose();
+        this.remote.dispose();
+    }
 }
