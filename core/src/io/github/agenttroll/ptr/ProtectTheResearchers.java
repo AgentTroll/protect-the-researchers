@@ -3,6 +3,7 @@ package io.github.agenttroll.ptr;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
+import io.github.agenttroll.ptr.comm.Remote;
 import io.github.agenttroll.ptr.scene.PtrScene;
 
 public class ProtectTheResearchers extends ApplicationAdapter {
@@ -11,6 +12,8 @@ public class ProtectTheResearchers extends ApplicationAdapter {
 	@Override
 	public void create() {
 		this.scene = new PtrScene();
+
+		Remote remote = new Remote();
 	}
 
 	@Override
