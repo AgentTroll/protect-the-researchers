@@ -15,7 +15,10 @@ public class Remote {
 
     public Remote(String portId) {
         this.port = SerialPort.getCommPort(portId);
+
+        // Apparently order matters here, btw
         this.port.openPort();
+        this.port.setBaudRate(2000000);
     }
 
     public void addListener(MessageHandler listener) {
@@ -28,9 +31,10 @@ public class Remote {
         StringBuilder buf = new StringBuilder();
         buf.append(id).append(" ");
         msg.encode(buf);
+        buf.append("\n");
 
         byte[] data = buf.toString().getBytes(Platform.CHARSET);
-        this.port.writeBytes(data, data.length);
+        this.ioPool.execute(() -> this.port.writeBytes(data, data.length));
     }
 
     public void dispose() {

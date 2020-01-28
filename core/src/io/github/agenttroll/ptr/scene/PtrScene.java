@@ -1,5 +1,9 @@
 package io.github.agenttroll.ptr.scene;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.GL30;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import io.github.agenttroll.ptr.action.DescendAction;
@@ -16,10 +20,37 @@ public class PtrScene extends SplitScene {
 
     public PtrScene(Remote remote) {
         this.remote = remote;
-        this.remote.addListener(new PtrListener());
+        this.remote.addListener(new PtrListener(remote));
 
         this.addArrowToStage(this.getLeft());
         this.addArrowToStage(this.getRight());
+    }
+
+    @Override
+    public void render() {
+        super.render();
+
+        this.drawBox(this.getLeft());
+        this.drawBox(this.getRight());
+    }
+
+    private void drawBox(Stage stage) {
+        float lineH = stage.getHeight() * 0.1F;
+        stage.getViewport().apply();
+
+        Gdx.gl.glLineWidth(1);
+        Gdx.gl.glEnable(GL30.GL_BLEND);
+
+        ShapeRenderer renderer = new ShapeRenderer();
+        renderer.setProjectionMatrix(stage.getCamera().combined);
+        renderer.begin(ShapeRenderer.ShapeType.Line);
+        renderer.setColor(Color.WHITE.cpy().sub(0, 0, 0, 0.4F));
+        renderer.line(1, 0, 1, lineH);
+        renderer.line(1, lineH, stage.getWidth(), lineH);
+        renderer.line(stage.getWidth(), lineH, stage.getWidth(), 0);
+        renderer.end();
+
+        Gdx.gl.glLineWidth(1);
     }
 
     private void addArrowToStage(Stage stage) {

@@ -23,9 +23,12 @@ public class SplitScene {
 
         Viewport leftViewport = this.left.getViewport();
         leftViewport.update(halfWidth, height, true);
+        leftViewport.setScreenSize(halfWidth, height);
+        leftViewport.setScreenX(0);
 
         Viewport rightViewport = this.right.getViewport();
         rightViewport.update(halfWidth, height, true);
+        rightViewport.setScreenSize(halfWidth, height);
         rightViewport.setScreenX(halfWidth);
     }
 
