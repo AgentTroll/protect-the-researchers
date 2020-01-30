@@ -19,7 +19,7 @@ public class DesktopLauncher {
             }
         }
 
-        if (Platform.DEBUG) {
+        if (Platform.DEBUG && args.length == 1) {
             Platform.printDebugWarning();
 
             args = new String[] {args[0], SerialPort.getCommPorts()[0].getSystemPortName()};
