@@ -18,7 +18,7 @@ public class Remote {
 
         // Apparently order matters here, btw
         this.port.openPort();
-        this.port.setBaudRate(2000000);
+        this.port.setBaudRate(Platform.BAUD);
     }
 
     public void addListener(MessageHandler listener) {

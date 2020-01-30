@@ -4,36 +4,48 @@ import com.badlogic.gdx.backends.lwjgl.LwjglApplication;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplicationConfiguration;
 import com.fazecast.jSerialComm.SerialPort;
 import io.github.agenttroll.ptr.ProtectTheResearchers;
+import io.github.agenttroll.ptr.platform.Platform;
 
 public class DesktopLauncher {
     public static void main(String[] args) {
-        if (args.length == 0) {
-            print("A port argument is required to connect to the Arduino. Try --show-ports.");
-            return;
-        }
+        if (args.length == 1) {
+            if (args[0].equalsIgnoreCase("--show-ports")) {
+                print("Showing all available serial ports:");
+                for (SerialPort port : SerialPort.getCommPorts()) {
+                    print("- " + port.getSystemPortName() + " (" + port.getDescriptivePortName() + ")");
+                }
 
-        if (args.length != 1) {
-            print("Provide only a single argument to this program in order to run.");
-            return;
-        }
-
-        String arg = args[0];
-        if (arg.equalsIgnoreCase("--show-ports")) {
-            print("Showing all available serial ports:");
-            for (SerialPort port : SerialPort.getCommPorts()) {
-                print("- " + port.getSystemPortName() + " (" + port.getDescriptivePortName() + ")");
+                return;
             }
+        }
 
+        if (Platform.DEBUG) {
+            Platform.printDebugWarning();
+
+            args = new String[] {args[0], SerialPort.getCommPorts()[0].getSystemPortName()};
+        }
+
+        if (args.length != 2) {
+            print("Two ports are is required to connect to the Arduinos. Try --show-ports.");
             return;
         }
 
-        if (!isPortValid(arg)) {
-            print("Unable to find port '" + arg + "', try --show-ports.");
+        String leftPort = args[0];
+        String rightPort = args[1];
+
+        if (!isPortValid(leftPort)) {
+            print("Unable to find port '" + leftPort + "', try --show-ports.");
             return;
         }
 
+        if (!isPortValid(rightPort)) {
+            print("Unable to find port '" + rightPort + "', try --show-ports.");
+            return;
+        }
+
+        ProtectTheResearchers app = new ProtectTheResearchers(leftPort, rightPort);
         LwjglApplicationConfiguration config = new LwjglApplicationConfiguration();
-        new LwjglApplication(new ProtectTheResearchers(arg), config);
+        new LwjglApplication(app, config);
     }
 
     private static void print(String string) {

@@ -7,4 +7,5 @@ sourceSets.main.java.srcDirs = ["src/"]
 
 dependencies {
     compile 'com.fazecast:jSerialComm:[2.0.0,3.0.0)'
+    compile "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
 }

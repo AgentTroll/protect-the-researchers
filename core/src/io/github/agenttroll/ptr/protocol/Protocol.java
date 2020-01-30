@@ -2,6 +2,7 @@ package io.github.agenttroll.ptr.protocol;
 
 import io.github.agenttroll.ptr.protocol.in.ErrorMsg;
 import io.github.agenttroll.ptr.protocol.in.InputStatusMsg;
+import io.github.agenttroll.ptr.protocol.in.StartGameMsg;
 import io.github.agenttroll.ptr.protocol.out.WindowBeginMsg;
 import io.github.agenttroll.ptr.protocol.out.WindowEndMsg;
 
@@ -19,6 +20,7 @@ public class Protocol {
     static {
         insertInPacket(0, InputStatusMsg.class);
         insertInPacket(1, ErrorMsg.class);
+        insertInPacket(2, StartGameMsg.class);
 
         outPackets.put(WindowBeginMsg.class, 0);
         outPackets.put(WindowEndMsg.class, 1);

@@ -1,5 +1,6 @@
 package io.github.agenttroll.ptr.comm;
 
+import com.badlogic.gdx.Gdx;
 import com.fazecast.jSerialComm.SerialPort;
 import com.fazecast.jSerialComm.SerialPortEvent;
 import com.fazecast.jSerialComm.SerialPortMessageListener;
@@ -11,8 +12,8 @@ import java.util.regex.Pattern;
 
 public class RemoteListener implements SerialPortMessageListener {
     private static final byte[] LF = "\n".getBytes(Platform.CHARSET);
-    private static final Pattern SPACE_PATTERN = Pattern.compile(" ");
     private static final String[] EMPTY_ARGS = new String[0];
+    private static final ThreadLocal<Pattern> SPACE_PATTERN = ThreadLocal.withInitial(() -> Pattern.compile(" "));
 
     private final MessageHandler listener;
 
@@ -48,13 +49,14 @@ public class RemoteListener implements SerialPortMessageListener {
             String[] components;
             if (dataString.length() > firstSpace + 1) {
                 String componentString = dataString.substring(firstSpace + 1).trim();
-                components = SPACE_PATTERN.split(componentString);
+                components = SPACE_PATTERN.get().split(componentString);
             } else {
                 components = EMPTY_ARGS;
             }
 
             InMsg msg = Protocol.decode(id, components);
-            this.listener.handle(msg);
+
+            Gdx.app.postRunnable(() -> this.listener.handle(msg));
         } catch (Exception e) {
             e.printStackTrace();
         }

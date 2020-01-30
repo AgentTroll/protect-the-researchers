@@ -5,7 +5,7 @@ import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
-public class SplitScene {
+public class SplitScene implements Scene {
     private final Stage left;
     private final Stage right;
 
@@ -18,6 +18,7 @@ public class SplitScene {
         this.right = new Stage(new FitViewport(halfWidth, windowHeight));
     }
 
+    @Override
     public void resize(int width, int height) {
         int halfWidth = width / 2;
 
@@ -32,6 +33,7 @@ public class SplitScene {
         rightViewport.setScreenX(halfWidth);
     }
 
+    @Override
     public void render() {
         float deltaTime = Gdx.graphics.getDeltaTime();
 
@@ -44,6 +46,7 @@ public class SplitScene {
         this.right.draw();
     }
 
+    @Override
     public void dispose() {
         this.left.dispose();
         this.right.dispose();
