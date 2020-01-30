@@ -3,6 +3,9 @@ package io.github.agenttroll.ptr.game;
 import io.github.agenttroll.ptr.comm.Remote;
 import io.github.agenttroll.ptr.scene.Scene;
 
+// State-holder class to pass around to the listeners
+// and different scenes that will be utilized to show
+// the graphics on the screen
 public class Game {
     private final Remote leftRemote;
     private final Remote rightRemote;
@@ -14,8 +17,9 @@ public class Game {
         this.leftRemote = leftRemote;
         this.rightRemote = rightRemote;
 
+        // Also initialize the Arduino listeners
         this.leftRemote.addListener(new PtrListener(this));
-        // this.rightRemote.addListener(new PtrListener(this));
+        this.rightRemote.addListener(new PtrListener(this));
     }
 
     public Remote getLeftRemote() {

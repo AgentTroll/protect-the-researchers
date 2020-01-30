@@ -10,6 +10,9 @@ import io.github.agenttroll.ptr.protocol.Protocol;
 
 import java.util.regex.Pattern;
 
+// Internal implementation of a serial listener used to
+// handle serial input from a remote and transform it
+// into messages that the application listener can understand
 public class RemoteListener implements SerialPortMessageListener {
     private static final byte[] LF = "\n".getBytes(Platform.CHARSET);
     private static final String[] EMPTY_ARGS = new String[0];
@@ -39,13 +42,18 @@ public class RemoteListener implements SerialPortMessageListener {
     @Override
     public void serialEvent(SerialPortEvent event) {
         try {
+            // Convert to String
             byte[] data = event.getReceivedData();
             String dataString = new String(data, Platform.CHARSET);
 
+            // Identify where the ID portion is and decode it
             int firstSpace = dataString.indexOf(' ');
             String idString = dataString.substring(0, firstSpace).trim();
 
             int id = Integer.parseInt(idString);
+
+            // If the message has extra fields, throw them into the
+            // components array
             String[] components;
             if (dataString.length() > firstSpace + 1) {
                 String componentString = dataString.substring(firstSpace + 1).trim();
@@ -54,8 +62,10 @@ public class RemoteListener implements SerialPortMessageListener {
                 components = EMPTY_ARGS;
             }
 
+            // Initialize packet with the information received
             InMsg msg = Protocol.decode(id, components);
 
+            // Run the app handling code on the GUI thread to ensure safety
             Gdx.app.postRunnable(() -> this.listener.handle(msg));
         } catch (Exception e) {
             e.printStackTrace();

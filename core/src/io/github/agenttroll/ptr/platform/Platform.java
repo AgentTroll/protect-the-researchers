@@ -3,6 +3,8 @@ package io.github.agenttroll.ptr.platform;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
+// Represents some platform constants that are used for
+// encoding, communications, etc.
 public final class Platform {
     public static final Charset CHARSET = StandardCharsets.US_ASCII;
     public static final int BAUD = 2_000_000;

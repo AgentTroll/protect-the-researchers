@@ -6,12 +6,13 @@ import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 
+// Superclass for static image sprites bundled in the jar
 public class ImageActor extends Actor {
     private final TextureRegion tr;
 
     public ImageActor(String texturePath) {
-        Texture badlogicLogo = new Texture(texturePath);
-        this.tr = new TextureRegion(badlogicLogo);
+        Texture tex = new Texture(texturePath);
+        this.tr = new TextureRegion(tex);
 
         this.setBounds(this.tr.getRegionX(), this.tr.getRegionY(),
                 this.tr.getRegionWidth(), this.tr.getRegionHeight());

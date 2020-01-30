@@ -8,6 +8,7 @@ import io.github.agenttroll.ptr.platform.Platform;
 
 public class DesktopLauncher {
     public static void main(String[] args) {
+        // --show-ports argument support
         if (args.length == 1) {
             if (args[0].equalsIgnoreCase("--show-ports")) {
                 print("Showing all available serial ports:");
@@ -19,12 +20,14 @@ public class DesktopLauncher {
             }
         }
 
+        // DEBUG warning
         if (Platform.DEBUG && args.length == 1) {
             Platform.printDebugWarning();
 
             args = new String[] {args[0], SerialPort.getCommPorts()[0].getSystemPortName()};
         }
 
+        // Sanity check for left and right remote port arguments passed through CLI
         if (args.length != 2) {
             print("Two ports are is required to connect to the Arduinos. Try --show-ports.");
             return;

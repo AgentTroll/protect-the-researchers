@@ -3,6 +3,8 @@ package io.github.agenttroll.ptr.action;
 import com.badlogic.gdx.scenes.scene2d.Action;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 
+// Action that simply moves a sprite downwards at a
+// fixed speed
 public class DescendAction extends Action {
     private final float speed;
 

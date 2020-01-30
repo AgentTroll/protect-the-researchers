@@ -5,6 +5,10 @@ import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
+// Abstract view class used to control a vertically
+// split screen with two stages
+// This class was designed to be built on top of, not
+// to be used directly
 public class SplitScene implements Scene {
     private final Stage left;
     private final Stage right;
@@ -13,6 +17,7 @@ public class SplitScene implements Scene {
         float windowWidth = Gdx.graphics.getWidth();
         int windowHeight = Gdx.graphics.getHeight();
 
+        // Vertically split; each window is half the full width of the window
         float halfWidth = windowWidth / 2;
         this.left = new Stage(new FitViewport(halfWidth, windowHeight));
         this.right = new Stage(new FitViewport(halfWidth, windowHeight));
@@ -21,6 +26,10 @@ public class SplitScene implements Scene {
     @Override
     public void resize(int width, int height) {
         int halfWidth = width / 2;
+
+        // Update the viewport and then change its dimensions
+        // and offset from the bottom of the screen to prevent
+        // the viewport from shifting around
 
         Viewport leftViewport = this.left.getViewport();
         leftViewport.update(halfWidth, height, true);
@@ -36,6 +45,10 @@ public class SplitScene implements Scene {
     @Override
     public void render() {
         float deltaTime = Gdx.graphics.getDeltaTime();
+
+        // Switch into the context of both stage viewports
+        // and perform the necessary actions and draw the
+        // actors on screen
 
         this.left.getViewport().apply();
         this.left.act(deltaTime);

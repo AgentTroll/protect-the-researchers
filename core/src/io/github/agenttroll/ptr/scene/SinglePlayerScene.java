@@ -14,6 +14,8 @@ import io.github.agenttroll.ptr.game.Game;
 import static com.badlogic.gdx.scenes.scene2d.actions.Actions.run;
 import static com.badlogic.gdx.scenes.scene2d.actions.Actions.sequence;
 
+// Represents the game screen when the player
+// is playing against the computer
 public class SinglePlayerScene extends SingleScene {
     private final Game game;
 
@@ -30,13 +32,18 @@ public class SinglePlayerScene extends SingleScene {
         this.drawBox(this.getStage());
     }
 
+    // Draws the little box at the bottom of the screen
+    // representing the area where the input is supposed
+    // to take place
     private void drawBox(Stage stage) {
+        // Top of the box should be 10% of the screen above the bottom
         float lineH = stage.getHeight() * 0.1F;
-        stage.getViewport().apply();
 
-        Gdx.gl.glLineWidth(1);
-        Gdx.gl.glEnable(GL30.GL_BLEND);
+        Gdx.gl.glLineWidth(1); // Set the rendered line width
+        Gdx.gl.glEnable(GL30.GL_BLEND); // Allow opacity changes
 
+        // TODO: Possibly extract `renderer` to its own field
+        // This performs the actual drawing of the box
         ShapeRenderer renderer = new ShapeRenderer();
         renderer.setProjectionMatrix(stage.getCamera().combined);
         renderer.begin(ShapeRenderer.ShapeType.Line);
@@ -46,15 +53,19 @@ public class SinglePlayerScene extends SingleScene {
         renderer.line(stage.getWidth(), lineH, stage.getWidth(), 0);
         renderer.end();
 
-        Gdx.gl.glLineWidth(1);
+        Gdx.gl.glLineWidth(1); // Reset line width for other tasks
     }
 
+    // Adds the arrow actor and adds the appropriate tasks
+    // (actions) that control its movement and behavior
     private void addArrowToStage(Stage stage) {
         ArrowActor arrow = new ArrowActor();
         this.setupArrow(stage, arrow, 0.125F);
         stage.addActor(arrow);
     }
 
+    // Adds the controller tasks (actions) to the given action
+    // on the given stage
     private void setupArrow(Stage stage, Actor arrow, float pct) {
         float rX = stage.getWidth() * pct;
         arrow.addAction(new SpawnAction(rX, stage.getHeight()));

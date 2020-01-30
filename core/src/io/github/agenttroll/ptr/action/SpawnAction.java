@@ -2,6 +2,8 @@ package io.github.agenttroll.ptr.action;
 
 import com.badlogic.gdx.scenes.scene2d.Action;
 
+// Action that moves the action to the given "spawn"
+// position, assuming that it is visible
 public class SpawnAction extends Action {
     private final float spawnX;
     private final float spawnY;

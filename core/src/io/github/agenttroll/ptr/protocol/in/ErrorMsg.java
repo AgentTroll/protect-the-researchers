@@ -2,6 +2,10 @@ package io.github.agenttroll.ptr.protocol.in;
 
 import io.github.agenttroll.ptr.protocol.InMsg;
 
+// A packet that represents that an error has occurred on the
+// Arduino that the app should know about and log
+
+// Format: <int:error code>
 public class ErrorMsg extends InMsg {
     private final int errorCode;
 

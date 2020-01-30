@@ -9,6 +9,8 @@ import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 
+// Abstract actor superclass for text elements to be shown
+// on the stage using the Fira font bundled in the jar
 public abstract class TextActor extends Actor {
     private static final BitmapFont FONT;
 
