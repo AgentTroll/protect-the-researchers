@@ -220,10 +220,30 @@ void setup() {
     pinMode(SINGLE_PLAYER_BTN_PIN, INPUT);
 }
 
-// This looks a little unwieldly but trust me this is a lot easier to maintain
+// This looks a little unwieldy but trust me this is a lot easier to maintain
 // once you get the hang of it
 
-// 
+// The game is a state machine, this allows the Arduino to be responsive to
+// any messages being sent to it from the app (at the time of writing, nothing
+// is being sent actually, so this might not even be useful in the future).
+// The key is to reduce the latency and prevent using delay*() which will stall
+// the Arduino and prevent it from doing ANYTHING - things such as checking with
+// the sensors will be put on hold, so things can be missed here.
+
+// The game state goes basically from pre_start -> start -> run -> end.
+// With minimal use of objects, a state machine allows the code to be pretty darn
+// clean and allows for a very basic level of separation of responsibility. It
+// is easy to understand the lifecycle and to do control flow using a state machine.
+// On top of that, it allows me to make changes to each stage independent to other
+// stages, thereby making it extremely flexible and easy to change as we are still
+// prototyping and figuring out what features to and not to implement at the time
+// of writing this.
+
+// The run phase is a state machine inside the state machine. While the game is in
+// the run phase, it will handle rounds in exactly the same way with a start round ->
+// run round -> and end round. Again, this allows for the greatest level of
+// responsiveness and utilization of the loop function without having to rely on
+// the hardware to keep time.
 
 int await_start_game_func() {
     if (check_btn(SINGLE_PLAYER_BTN_PIN, &single_player_btn)) {
