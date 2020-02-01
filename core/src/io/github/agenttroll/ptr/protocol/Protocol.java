@@ -3,11 +3,14 @@ package io.github.agenttroll.ptr.protocol;
 import io.github.agenttroll.ptr.protocol.in.ErrorMsg;
 import io.github.agenttroll.ptr.protocol.in.InputStatusMsg;
 import io.github.agenttroll.ptr.protocol.in.StartGameMsg;
+import io.github.agenttroll.ptr.protocol.in.StartRoundMsg;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.Map;
+
+// THREAD-SAFE CLASS
 
 // Holds the ID-Message mappings
 // Used to identify and construct incoming messages
@@ -19,10 +22,12 @@ public class Protocol {
             new HashMap<>();
 
     // Perform the mapping here
+    // Static initialization done under lock, DO NOT modify state after here
     static {
         insertInPacket(0, InputStatusMsg.class);
         insertInPacket(1, ErrorMsg.class);
         insertInPacket(2, StartGameMsg.class);
+        insertInPacket(3, StartRoundMsg.class);
 
         // outPackets.put(WindowBeginMsg.class, 0);
     }

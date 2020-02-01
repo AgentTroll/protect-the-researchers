@@ -3,26 +3,34 @@ package io.github.agenttroll.ptr;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
+import io.github.agenttroll.ptr.comm.ArduinoRemote;
+import io.github.agenttroll.ptr.comm.DummyRemote;
 import io.github.agenttroll.ptr.comm.Remote;
 import io.github.agenttroll.ptr.game.Game;
-import io.github.agenttroll.ptr.game.GamePhase;
 import io.github.agenttroll.ptr.scene.Scene;
-import io.github.agenttroll.ptr.scene.StartScene;
 
-public class ProtectTheResearchers extends ApplicationAdapter {
+public class PtrApp extends ApplicationAdapter {
     private Game game;
 
-    public ProtectTheResearchers(String leftPort, String rightPort) {
-        Remote leftRemote = new Remote(leftPort);
-        Remote rightRemote = new Remote(rightPort);
+    public PtrApp(String leftPort, String rightPort) {
+        Remote leftRemote = initRemote(leftPort);
+        Remote rightRemote = initRemote(rightPort);
 
         this.game = new Game(leftRemote, rightRemote);
     }
 
+    private static Remote initRemote(String port) {
+        if (port.contains("dummy")) {
+            return new DummyRemote(port);
+        } else {
+            return new ArduinoRemote(port);
+        }
+    }
+
     @Override
     public void create() {
-        this.game.setPhase(GamePhase.START);
-        this.game.setCurrentScene(new StartScene());
+        // Initialize with the starting game state
+        this.game.initGame();
     }
 
     @Override
@@ -33,8 +41,10 @@ public class ProtectTheResearchers extends ApplicationAdapter {
 
     @Override
     public void render() {
+        // Clear the screen to black
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
+        // Render the scene on top of the window
         Scene scene = this.game.getCurrentScene();
         scene.render();
     }

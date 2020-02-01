@@ -3,7 +3,7 @@ package io.github.agenttroll.ptr.desktop;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplication;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplicationConfiguration;
 import com.fazecast.jSerialComm.SerialPort;
-import io.github.agenttroll.ptr.ProtectTheResearchers;
+import io.github.agenttroll.ptr.PtrApp;
 import io.github.agenttroll.ptr.platform.Platform;
 
 public class DesktopLauncher {
@@ -46,7 +46,7 @@ public class DesktopLauncher {
             return;
         }
 
-        ProtectTheResearchers app = new ProtectTheResearchers(leftPort, rightPort);
+        PtrApp app = new PtrApp(leftPort, rightPort);
         LwjglApplicationConfiguration config = new LwjglApplicationConfiguration();
         new LwjglApplication(app, config);
     }
@@ -62,6 +62,7 @@ public class DesktopLauncher {
             }
         }
 
-        return false;
+        // Allow dummy ports if debugging, otherwise return false
+        return Platform.DEBUG && test.contains("dummy");
     }
 }

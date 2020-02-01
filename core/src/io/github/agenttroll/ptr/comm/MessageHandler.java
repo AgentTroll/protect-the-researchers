@@ -6,5 +6,5 @@ import io.github.agenttroll.ptr.protocol.InMsg;
 // logic upon reception of a packet from one of the
 // Arduinos
 public interface MessageHandler {
-    void handle(InMsg msg);
+    void handle(Remote remote, InMsg msg);
 }
