@@ -1,9 +1,6 @@
 package io.github.agenttroll.ptr.protocol;
 
-import io.github.agenttroll.ptr.protocol.in.ErrorMsg;
-import io.github.agenttroll.ptr.protocol.in.InputStatusMsg;
-import io.github.agenttroll.ptr.protocol.in.StartGameMsg;
-import io.github.agenttroll.ptr.protocol.in.StartRoundMsg;
+import io.github.agenttroll.ptr.protocol.in.*;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -28,6 +25,8 @@ public class Protocol {
         insertInPacket(1, ErrorMsg.class);
         insertInPacket(2, StartGameMsg.class);
         insertInPacket(3, StartRoundMsg.class);
+        insertInPacket(4, StartThreatMsg.class);
+        insertInPacket(5, EndGameMsg.class);
 
         // outPackets.put(WindowBeginMsg.class, 0);
     }

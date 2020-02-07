@@ -3,10 +3,7 @@ package io.github.agenttroll.ptr.game;
 import io.github.agenttroll.ptr.comm.MessageHandler;
 import io.github.agenttroll.ptr.comm.Remote;
 import io.github.agenttroll.ptr.protocol.InMsg;
-import io.github.agenttroll.ptr.protocol.in.ErrorMsg;
-import io.github.agenttroll.ptr.protocol.in.InputStatusMsg;
-import io.github.agenttroll.ptr.protocol.in.StartGameMsg;
-import io.github.agenttroll.ptr.protocol.in.StartRoundMsg;
+import io.github.agenttroll.ptr.protocol.in.*;
 
 // NOT THREAD-SAFE
 // This class should be called on the GUI thread
@@ -43,9 +40,7 @@ public class PtrListener implements MessageHandler {
                 return;
             }
 
-            StartGameMsg startGame = (StartGameMsg) msg;
-            this.game.setPhase(GamePhase.RUNNING);
-            this.game.setMode(startGame.getMode());
+            this.game.handleStartGame((StartGameMsg) msg);
         }
 
         if (msg instanceof StartRoundMsg) {
@@ -53,7 +48,23 @@ public class PtrListener implements MessageHandler {
                 return;
             }
 
-            this.game.handleRoundStart();
+            this.game.handleStartRound();
+        }
+
+        if (msg instanceof StartThreatMsg) {
+            if (!this.filterPhase(GamePhase.RUNNING)) {
+                return;
+            }
+
+            this.game.handleStartThreat();
+        }
+
+        if (msg instanceof EndGameMsg) {
+            if (!this.filterPhase(GamePhase.RUNNING)) {
+                return;
+            }
+
+            this.game.handleEndGame((EndGameMsg) msg);
         }
     }
 

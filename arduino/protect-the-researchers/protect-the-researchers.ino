@@ -3,6 +3,7 @@
 static const int UNKNOWN_PACKET_ID = 0;
 static const int INVALID_GAME_STATE = 1;
 static const int INVALID_ROUND_STATE = 2;
+static const int DEBUG_MODE = 3;
 
 // ---------- Protocol handling primitives ------------
 
@@ -77,8 +78,23 @@ static void send_start_game(bool single_player) {
     Serial.println("2 " + sp_str);
 }
 
+// Indicates to the app that a new round for a single
+// input has started
 static void send_start_round() {
     Serial.println("3");
+}
+
+// Indicates that a new threat (set of rounds) has started
+// for a string of inputs
+static void send_start_threat() {
+    Serial.println("4");
+}
+
+// Indicates that the game has ended given whether or not
+// the player on this Arduino has won
+static void send_end_game(bool win) {
+    String win_str = bool_to_str(win);
+    Serial.println("5 " + win_str);
 }
 
 // ------------ Packet handling --------------
@@ -117,6 +133,7 @@ static const int SONAR_SAMPLE_SIZE = 20;
 
 // Sends a ping and measures the RTT for the ping
 // to reach the distance sensor
+// Based on: https://dronebotworkshop.com/hc-sr04-ultrasonic-distance-sensor-arduino/
 static float sonar_rtt(int pin) {
     pinMode(pin, OUTPUT);
     digitalWrite(pin, LOW);
@@ -185,6 +202,7 @@ static bool check_btn(int pin, bool *active_state) {
 // ---------------- Arduino program -------------------
 
 static const long BAUD = 2000000;
+static const bool DEBUG = true;
 
 static const int SINGLE_PLAYER_BTN_PIN = 4;
 static const int SONAR_PINC = 1;
@@ -197,27 +215,48 @@ static const int GAME_STATE_START = 0;
 static const int GAME_STATE_RUNNING = 1;
 static const int GAME_STATE_END = 2;
 
+static const int TOTAL_THREATS = 3;
+static const int INITIAL_ROUNDS_REQ = 10;
+static const int INITIAL_LIVES = 5;
+
 static const int ROUND_STATE_START = 0;
 static const int ROUND_STATE_RUNNING = 1;
 static const int ROUND_STATE_END = 2;
+static const int ROUND_STATE_EXIT = 3;
 
 static const long INITIAL_ROUND_LIMIT_MS = 5000;
 static const long ROUND_INTERIM_PAUSE_MS = 2000;
 
-double sonar_rtt_means[SONAR_PINC] = {0};
-double sonar_rtt_stdev[SONAR_PINC] = {0};
+static const int END_STATE_PROCEED = 0;
+static const int END_STATE_WIN = 1;
+static const int END_STATE_LOSE = 2;
+
+double sonar_rtt_means[SONAR_PINC] = {};
+double sonar_rtt_stdev[SONAR_PINC] = {};
 
 int game_state = GAME_STATE_AWAIT_START;
+int end_state = END_STATE_PROCEED;
+
+int threat_num = 0;
+int rounds_req = INITIAL_ROUNDS_REQ;
+int rounds_complete = INITIAL_ROUNDS_REQ;
 
 int round_state;
 int expected_shape;
 unsigned long round_begin_ms;
 unsigned long cur_round_limit_ms = INITIAL_ROUND_LIMIT_MS;
 
+int lives_remaining = INITIAL_LIVES;
+
 void setup() {
     Serial.begin(BAUD);
 
     pinMode(SINGLE_PLAYER_BTN_PIN, INPUT);
+
+    // Let console know we're in debug mode, just in case
+    if (DEBUG) {
+        send_error_packet(DEBUG_MODE);
+    }
 }
 
 // This looks a little unwieldy but trust me this is a lot easier to maintain
@@ -271,13 +310,52 @@ int start_game_func() {
 }
 
 int start_round_func() {
+    // The number of rounds to end the threat has elapsed
+    // with the player entering everything in correctly
+    if (rounds_req == rounds_complete) {
+        // If this is the last threat, end the game;
+        // the player has won
+        if (threat_num == TOTAL_THREATS) {
+            // Notify the app
+            send_end_game(true);
+            end_state = END_STATE_WIN;
+
+            return ROUND_STATE_END;
+        }
+
+        // Start a timer
+        round_begin_ms = millis();
+
+        // Notify the app that a new threat has started
+        // and advance the game state accordingly
+        send_start_threat();
+        threat_num++;
+        rounds_complete = 0;
+    }
+
+    // Wait for the player to see the screen using the
+    // threat completion timer; otherwise we'll be
+    // using the timer from the previous round which
+    // will proceed past the if statement
+    long cur_ms = millis();
+    long elapsed_ms = cur_ms - round_begin_ms;
+    if (elapsed_ms < ROUND_INTERIM_PAUSE_MS) {
+        return ROUND_STATE_START;
+    }
+
+    // Start the timer for the current round
     round_begin_ms = millis();
 
-    // Randomize the expected shape
-    // The shape values use the protocol 0-3, so
-    // simply limit to 4 here
-    expected_shape = random(4);
+    if (DEBUG) {
+        expected_shape = SHAPE_SQUARE;
+    } else {
+        // Randomize the expected shape
+        // The shape values use the protocol 0-3, so
+        // simply limit to 4 here
+        expected_shape = random(4);
+    }
 
+    // Let the app know a new round has started
     send_start_round();
 
     return ROUND_STATE_RUNNING;
@@ -293,13 +371,31 @@ int running_round_func() {
         float stdev = sonar_rtt_stdev[i];
 
         // If the difference between the initial value
-        // and the value read is greater than 3 standard deviations
+        // and the value read is greater than x standard deviations
         // then there's a good chance something has passed the sensor
         if (delta > stdev) {
             int mapped_shape = SONAR_IDX_SHAPE_MAP[i];
-            send_input_status(mapped_shape == expected_shape ? IN_STATUS_CORRECT : IN_STATUS_INCORRECT);
+            bool correct = mapped_shape == expected_shape ? IN_STATUS_CORRECT : IN_STATUS_INCORRECT;
 
-            // Terminate the round early irrespective of the right or wrong shape
+            // If correct, let the app know about it
+            // Otherwise, decrement the number of lives
+            if (correct) {
+                send_input_status(correct);
+            } else {
+                lives_remaining--;
+
+                // If no lives left, lose the game
+                // and then flag the state machine to exit
+                if (lives_remaining == 0) {
+                    // Notify the app
+                    send_end_game(false);
+                    end_state = END_STATE_LOSE;
+                }
+            }
+
+            // Input response must be immediate and start a timer
+            // to await the app to show whatever screen comes up next
+            // ROUND_STATE_END to handle next action
             round_begin_ms = millis();
             return ROUND_STATE_END;
         }
@@ -323,11 +419,18 @@ int running_round_func() {
 
 int end_round_func() {
     // Wait for a few seconds to allow players to see anything
-    // and prepare for the next round
+    // from the app and prepare for the next round
     long cur_ms = millis();
     long elapsed_ms = cur_ms - round_begin_ms;
     if (elapsed_ms >= ROUND_INTERIM_PAUSE_MS) {
-        return ROUND_STATE_START;
+        // Loop back to a new round if we should proceed
+        // otherwise, the player has either lost or won
+        // the game and the run loop should exit accordingly
+        if (end_state == END_STATE_PROCEED) {
+            return ROUND_STATE_START;
+        } else {
+            return ROUND_STATE_EXIT;
+        }
     }
   
     return ROUND_STATE_END;
@@ -340,6 +443,8 @@ int running_game_func() {
         round_state = running_round_func();
     } else if (round_state == ROUND_STATE_END) {
         round_state = end_round_func();
+    } else if (round_state == ROUND_STATE_EXIT) {
+        return GAME_STATE_END;
     } else {
         send_error_packet(INVALID_ROUND_STATE);
         return GAME_STATE_END;
@@ -349,6 +454,13 @@ int running_game_func() {
 }
 
 int end_game_func() {
+    // Cleanup and reset state for the next game
+    end_state = END_STATE_PROCEED;
+    threat_num = 0;
+    rounds_complete = INITIAL_ROUNDS_REQ;
+    cur_round_limit_ms = INITIAL_ROUND_LIMIT_MS;
+    lives_remaining = INITIAL_LIVES;
+
     return GAME_STATE_START;
 }
 

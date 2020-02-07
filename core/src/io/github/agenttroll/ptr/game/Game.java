@@ -1,7 +1,9 @@
 package io.github.agenttroll.ptr.game;
 
 import io.github.agenttroll.ptr.comm.Remote;
+import io.github.agenttroll.ptr.protocol.in.EndGameMsg;
 import io.github.agenttroll.ptr.protocol.in.InputStatusMsg;
+import io.github.agenttroll.ptr.protocol.in.StartGameMsg;
 import io.github.agenttroll.ptr.scene.*;
 
 // State-holder class to pass around to the listeners
@@ -65,7 +67,12 @@ public class Game {
         this.currentScene = currentScene;
     }
 
-    public void handleRoundStart() {
+    public void handleStartGame(StartGameMsg msg) {
+        this.setPhase(GamePhase.RUNNING);
+        this.setMode(msg.getMode());
+    }
+
+    public void handleStartRound() {
         switch (this.mode) {
             case SINGLE_PLAYER:
                 this.setCurrentScene(new SinglePlayerScene(this));
@@ -79,7 +86,15 @@ public class Game {
     }
 
     public void handleInput(InputStatusMsg msg) {
-        System.out.printf("Received ISM: status=%s%n", msg.getStatus());
         this.setCurrentScene(new TextDebugScreen(msg.getStatus().name()));
+    }
+
+    public void handleStartThreat() {
+        this.setCurrentScene(new TextDebugScreen("New round!"));
+    }
+
+    public void handleEndGame(EndGameMsg msg) {
+        this.phase = GamePhase.END;
+        this.setCurrentScene(new TextDebugScreen("Game has ended (win = " + msg.isWin() + ")"));
     }
 }
