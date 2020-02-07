@@ -66,6 +66,14 @@ public class PtrListener implements MessageHandler {
 
             this.game.handleEndGame((EndGameMsg) msg);
         }
+
+        if (msg instanceof GameResetMsg) {
+            if (!this.filterPhase(GamePhase.END)) {
+                return;
+            }
+
+            this.game.handleGameReset();
+        }
     }
 
     // Ensure that the game is in the given phase(s)

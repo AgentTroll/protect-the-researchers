@@ -3,6 +3,7 @@ package io.github.agenttroll.ptr;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.Pixmap;
 import io.github.agenttroll.ptr.comm.ArduinoRemote;
 import io.github.agenttroll.ptr.comm.DummyRemote;
 import io.github.agenttroll.ptr.comm.Remote;
@@ -31,6 +32,11 @@ public class PtrApp extends ApplicationAdapter {
     public void create() {
         // Initialize with the starting game state
         this.game.initGame();
+
+        // Set the cursor to invisible
+        Pixmap pm = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+        Gdx.graphics.setCursor(Gdx.graphics.newCursor(pm, 0, 0));
+        pm.dispose();
     }
 
     @Override

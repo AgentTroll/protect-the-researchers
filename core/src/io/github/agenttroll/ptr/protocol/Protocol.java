@@ -27,6 +27,7 @@ public class Protocol {
         insertInPacket(3, StartRoundMsg.class);
         insertInPacket(4, StartThreatMsg.class);
         insertInPacket(5, EndGameMsg.class);
+        insertInPacket(6, GameResetMsg.class);
 
         // outPackets.put(WindowBeginMsg.class, 0);
     }

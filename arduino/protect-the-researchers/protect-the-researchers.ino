@@ -97,6 +97,10 @@ static void send_end_game(bool win) {
     Serial.println("5 " + win_str);
 }
 
+static void send_game_reset() {
+    Serial.println("6");
+}
+
 // ------------ Packet handling --------------
 
 // Performs high-level processing (i.e. deciding what the
@@ -178,6 +182,9 @@ static const int IN_STATUS_CORRECT = 0;
 static const int IN_STATUS_INCORRECT = 1;
 static const int IN_STATUS_TIME_OUT = 2;
 
+static const bool END_GAME_WIN = true;
+static const bool END_GAME_LOSE = false;
+
 // ----------- Button state protection ------------
 
 bool single_player_btn = false;
@@ -216,7 +223,7 @@ static const int GAME_STATE_RUNNING = 1;
 static const int GAME_STATE_END = 2;
 
 static const int TOTAL_THREATS = 3;
-static const int INITIAL_ROUNDS_REQ = 10;
+static const int INITIAL_ROUNDS_REQ = 5;
 static const int INITIAL_LIVES = 5;
 
 static const int ROUND_STATE_START = 0;
@@ -312,19 +319,19 @@ int start_game_func() {
 int start_round_func() {
     // The number of rounds to end the threat has elapsed
     // with the player entering everything in correctly
-    if (rounds_req == rounds_complete) {
+    if (rounds_complete == rounds_req) {
+        // Start a timer
+        round_begin_ms = millis();
+        
         // If this is the last threat, end the game;
         // the player has won
         if (threat_num == TOTAL_THREATS) {
             // Notify the app
-            send_end_game(true);
+            send_end_game(END_GAME_WIN);
             end_state = END_STATE_WIN;
 
             return ROUND_STATE_END;
         }
-
-        // Start a timer
-        round_begin_ms = millis();
 
         // Notify the app that a new threat has started
         // and advance the game state accordingly
@@ -342,6 +349,10 @@ int start_round_func() {
     if (elapsed_ms < ROUND_INTERIM_PAUSE_MS) {
         return ROUND_STATE_START;
     }
+
+    // A new round has started, increment the
+    // number of passed rounds counter
+    rounds_complete++;
 
     // Start the timer for the current round
     round_begin_ms = millis();
@@ -375,12 +386,12 @@ int running_round_func() {
         // then there's a good chance something has passed the sensor
         if (delta > stdev) {
             int mapped_shape = SONAR_IDX_SHAPE_MAP[i];
-            bool correct = mapped_shape == expected_shape ? IN_STATUS_CORRECT : IN_STATUS_INCORRECT;
+            bool correct = mapped_shape == expected_shape;
 
             // If correct, let the app know about it
             // Otherwise, decrement the number of lives
             if (correct) {
-                send_input_status(correct);
+                send_input_status(IN_STATUS_CORRECT);
             } else {
                 lives_remaining--;
 
@@ -388,8 +399,11 @@ int running_round_func() {
                 // and then flag the state machine to exit
                 if (lives_remaining == 0) {
                     // Notify the app
-                    send_end_game(false);
+                    send_end_game(END_GAME_LOSE);
                     end_state = END_STATE_LOSE;
+                } else {
+                    // Otherwise, let the app know the input was incorrect
+                    send_input_status(IN_STATUS_INCORRECT);
                 }
             }
 
@@ -408,7 +422,19 @@ int running_round_func() {
     long cur_ms = millis();
     long elapsed_ms = cur_ms - round_begin_ms;
     if (elapsed_ms >= cur_round_limit_ms) {
-        send_input_status(IN_STATUS_TIME_OUT);
+        lives_remaining--;
+
+        // If no lives left, lose the game
+        // and then flag the state machine to exit
+        if (lives_remaining == 0) {
+            // Notify the app
+            send_end_game(END_GAME_LOSE);
+            end_state = END_STATE_LOSE;
+        } else {
+            // Otherwise the player isn't losing yet
+            // update the screen accordingly
+            send_input_status(IN_STATUS_TIME_OUT);
+        }
 
         round_begin_ms = cur_ms;
         return ROUND_STATE_END;
@@ -461,7 +487,9 @@ int end_game_func() {
     cur_round_limit_ms = INITIAL_ROUND_LIMIT_MS;
     lives_remaining = INITIAL_LIVES;
 
-    return GAME_STATE_START;
+    send_game_reset();
+
+    return GAME_STATE_AWAIT_START;
 }
 
 void loop() {

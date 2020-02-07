@@ -4,7 +4,9 @@ import io.github.agenttroll.ptr.comm.Remote;
 import io.github.agenttroll.ptr.protocol.in.EndGameMsg;
 import io.github.agenttroll.ptr.protocol.in.InputStatusMsg;
 import io.github.agenttroll.ptr.protocol.in.StartGameMsg;
-import io.github.agenttroll.ptr.scene.*;
+import io.github.agenttroll.ptr.scene.Scene;
+import io.github.agenttroll.ptr.scene.StartScene;
+import io.github.agenttroll.ptr.scene.TextDebugScreen;
 
 // State-holder class to pass around to the listeners
 // and different scenes that will be utilized to show
@@ -73,7 +75,11 @@ public class Game {
     }
 
     public void handleStartRound() {
-        switch (this.mode) {
+        // TODO: Both need TwoPlayerScene, set one arduino to CPU
+
+        this.setCurrentScene(new TextDebugScreen("PROVIDE INPUT"));
+
+        /* switch (this.mode) {
             case SINGLE_PLAYER:
                 this.setCurrentScene(new SinglePlayerScene(this));
                 break;
@@ -82,7 +88,7 @@ public class Game {
                 break;
             default:
                 throw new UnsupportedOperationException(this.mode.name() + " is not supported");
-        }
+        } */
     }
 
     public void handleInput(InputStatusMsg msg) {
@@ -90,11 +96,16 @@ public class Game {
     }
 
     public void handleStartThreat() {
-        this.setCurrentScene(new TextDebugScreen("New round!"));
+        this.setCurrentScene(new TextDebugScreen("NEW THREAT"));
     }
 
     public void handleEndGame(EndGameMsg msg) {
-        this.phase = GamePhase.END;
+        this.setPhase(GamePhase.END);
         this.setCurrentScene(new TextDebugScreen("Game has ended (win = " + msg.isWin() + ")"));
+    }
+
+    public void handleGameReset() {
+        this.setPhase(GamePhase.START);
+        this.setCurrentScene(new StartScene());
     }
 }
