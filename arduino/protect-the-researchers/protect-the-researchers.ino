@@ -319,6 +319,7 @@ static void handle_cpu_notif() {
 }
 
 static void handle_threat_proceed() {
+    start_timer();
     is_threat_waiting = false;
 }
 
