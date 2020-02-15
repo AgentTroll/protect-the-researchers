@@ -14,15 +14,22 @@ import java.util.concurrent.TimeUnit;
 public class ArduinoRemote implements Remote {
     // The IO threads used to send packets asynchronously from the main thread
     private final ExecutorService ioPool = Executors.newSingleThreadExecutor();
+    private final String portId;
     private final SerialPort port;
 
     public ArduinoRemote(String portId) {
         // No error checking here - should be handled by the app
         this.port = SerialPort.getCommPort(portId);
+        this.portId = portId;
 
         // Apparently order matters here, btw
         this.port.openPort();
         this.port.setBaudRate(Platform.BAUD);
+    }
+
+    @Override
+    public String getPortId() {
+        return this.portId;
     }
 
     @Override
@@ -42,8 +49,18 @@ public class ArduinoRemote implements Remote {
         msg.encode(buf);
         buf.append("\n");
 
-        byte[] data = buf.toString().getBytes(Platform.CHARSET);
-        this.ioPool.execute(() -> this.port.writeBytes(data, data.length));
+        String bufStr = buf.toString().trim();
+        byte[] data = bufStr.getBytes(Platform.CHARSET);
+        this.ioPool.execute(() -> {
+            this.port.writeBytes(data, data.length);
+
+            if (Platform.DEBUG) {
+                System.out.printf("DEBUG: SENT '%s' (%s) TO %s%n",
+                        msg.getClass().getSimpleName(),
+                        bufStr,
+                        this.portId);
+            }
+        });
     }
 
     @Override

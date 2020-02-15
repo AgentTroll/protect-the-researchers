@@ -10,6 +10,11 @@ public class DummyRemote implements Remote {
     }
 
     @Override
+    public String getPortId() {
+        return this.portId;
+    }
+
+    @Override
     public void addListener(MessageHandler msgHandler) {
         System.out.printf("DEBUG: Added message handler '%s' to '%s'%n",
                 msgHandler.getClass().getSimpleName(), this.portId);
@@ -23,6 +28,6 @@ public class DummyRemote implements Remote {
 
     @Override
     public void dispose() {
-        System.out.printf("DEBUG: Disposed '%s'", this.portId);
+        System.out.printf("DEBUG: Disposed '%s'%n", this.portId);
     }
 }

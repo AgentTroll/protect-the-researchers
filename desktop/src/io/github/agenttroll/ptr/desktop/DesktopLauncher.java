@@ -21,11 +21,7 @@ public class DesktopLauncher {
         }
 
         // DEBUG warning
-        if (Platform.DEBUG && args.length == 1) {
-            Platform.printDebugWarning();
-
-            args = new String[] {args[0], SerialPort.getCommPorts()[0].getSystemPortName()};
-        }
+        Platform.printDebugWarning();
 
         // Sanity check for left and right remote port arguments passed through CLI
         if (args.length != 2) {

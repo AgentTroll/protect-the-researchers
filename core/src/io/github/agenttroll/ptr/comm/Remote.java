@@ -6,6 +6,9 @@ import io.github.agenttroll.ptr.protocol.OutMsg;
 // to control the actual game and the game input
 // Should, at least in theory, be thread-safe
 public interface Remote {
+    // Obtains the system port ID used to identify the remote port
+    String getPortId();
+
     // Adds the given application listener to handle input from this remote
     void addListener(MessageHandler msgHandler);
 

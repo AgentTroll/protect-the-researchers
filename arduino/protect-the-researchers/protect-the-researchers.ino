@@ -4,6 +4,7 @@ static const int UNKNOWN_PACKET_ID = 0;
 static const int INVALID_GAME_STATE = 1;
 static const int INVALID_ROUND_STATE = 2;
 static const int DEBUG_MODE = 3;
+static const int PLACEHOLDER = 4;
 
 // ---------- Protocol handling primitives ------------
 
@@ -30,12 +31,13 @@ static void parse_args(String args[], String input, int argc) {
             if (c != ' ') {
                 tmp_str.concat(input[idx]);
             } else {
-                args[i] = tmp_str;
-                tmp_str = "";
-                idx++;
                 break;
             }
         }
+
+        args[i] = tmp_str;
+        tmp_str = "";
+        idx++;
     }
 }
 
@@ -53,8 +55,12 @@ static const String TRUE_STR = "true";
 static const String FALSE_STR = "false";
 
 // Converts a boolean into a "true" or "false" string
-static const String bool_to_str(bool b) {
+static String bool_to_str(bool b) {
     return b ? TRUE_STR : FALSE_STR;
+}
+
+static bool str_to_bool(String str) {
+    return str == TRUE_STR;
 }
 
 // Sends a message indicating that an error as occurred
@@ -103,10 +109,31 @@ static void send_game_reset() {
 
 // ------------ Packet handling --------------
 
+// Handles notification to set this arduino as the "computer"
+// player and therefore this arduino will produce output
+// rather than listening for it
+static void handle_cpu_notif();
+
+// Handles the notification that the other player has "caught
+// up" to this arduino and the next threat can be presented
+static void handle_threat_proceed();
+
+// Handles the game being ended by the other player
+static void handle_game_end(String components[]);
+
 // Performs high-level processing (i.e. deciding what the
 // game should do as a result of receiving the message)
 static void handle_msg(int id, String components[]) {
     switch (id) {
+        case 0:
+            handle_cpu_notif();
+            break;
+        case 1:
+            handle_threat_proceed();
+            break;
+        case 2:
+            handle_game_end(components);
+            break;
         default:
             send_error_packet(UNKNOWN_PACKET_ID);
     }
@@ -124,6 +151,7 @@ static void ingest_packets() {
 
         int packet_id = args[0].toInt();
         String components[argc - 1];
+        populate_components(components, args, argc);
 
         handle_msg(packet_id, components);
     }
@@ -150,6 +178,9 @@ static float sonar_rtt(int pin) {
     return pulseIn(pin, HIGH, PULSE_MAX_WAIT_USEC);
 }
 
+// Samples the "default" distance measured by the ultrasonic
+// sensors and fills the given mean and stdev arrays with the
+// data
 static void sonar_rtt_sample(int pin, double *mean, double *stdev) {
     float sample_data[SONAR_SAMPLE_SIZE];
     for (int i = 0; i < SONAR_SAMPLE_SIZE; i++) {
@@ -237,9 +268,18 @@ static const long ROUND_INTERIM_PAUSE_MS = 2000;
 static const int END_STATE_PROCEED = 0;
 static const int END_STATE_WIN = 1;
 static const int END_STATE_LOSE = 2;
+static const int END_STATE_NOTIFIED = 3;
+
+static const long INPUT_CHANCE_NUM = 1;
+static const long INPUT_CHANCE_DEN = 30000;
+static const long INPUT_CORRECT_NUM = 50;
+static const long INPUT_CORRECT_DEN = 100;
 
 double sonar_rtt_means[SONAR_PINC] = {};
 double sonar_rtt_stdev[SONAR_PINC] = {};
+
+bool is_cpu = false;
+bool is_threat_waiting = false;
 
 int game_state = GAME_STATE_AWAIT_START;
 int end_state = END_STATE_PROCEED;
@@ -248,9 +288,10 @@ int threat_num = 0;
 int rounds_req = INITIAL_ROUNDS_REQ;
 int rounds_complete = INITIAL_ROUNDS_REQ;
 
-int round_state;
+int round_state = ROUND_STATE_START;
 int expected_shape;
 unsigned long round_begin_ms;
+static void start_timer() { round_begin_ms = millis(); }
 unsigned long cur_round_limit_ms = INITIAL_ROUND_LIMIT_MS;
 
 int lives_remaining = INITIAL_LIVES;
@@ -264,6 +305,28 @@ void setup() {
     if (DEBUG) {
         send_error_packet(DEBUG_MODE);
     }
+}
+
+// Packet handling function definitions
+
+static void handle_cpu_notif() {
+    is_cpu = true;
+
+    // The other arduino has started the game, enter
+    // start game mode
+    start_timer();
+    game_state = GAME_STATE_START;
+}
+
+static void handle_threat_proceed() {
+    is_threat_waiting = false;
+}
+
+static void handle_game_end(String components[]) {
+    end_state = END_STATE_NOTIFIED;
+
+    start_timer();
+    round_state = ROUND_STATE_END;
 }
 
 // This looks a little unwieldy but trust me this is a lot easier to maintain
@@ -295,6 +358,7 @@ int await_start_game_func() {
     if (check_btn(SINGLE_PLAYER_BTN_PIN, &single_player_btn)) {
         send_start_game(SINGLE_PLAYER);
 
+        start_timer();
         return GAME_STATE_START;
     }
 
@@ -302,6 +366,14 @@ int await_start_game_func() {
 }
 
 int start_game_func() {
+    // Allow the start game screen to linger some before
+    // actually beginning any logic
+    long cur_ms = millis();
+    long elapsed_ms = cur_ms - round_begin_ms;
+    if (elapsed_ms < ROUND_INTERIM_PAUSE_MS) {
+        return GAME_STATE_START;
+    }
+  
     round_state = ROUND_STATE_START;
 
     // Resample the unobstructed ultrasound at the beginning
@@ -321,8 +393,8 @@ int start_round_func() {
     // with the player entering everything in correctly
     if (rounds_complete == rounds_req) {
         // Start a timer
-        round_begin_ms = millis();
-        
+        start_timer();
+
         // If this is the last threat, end the game;
         // the player has won
         if (threat_num == TOTAL_THREATS) {
@@ -338,6 +410,13 @@ int start_round_func() {
         send_start_threat();
         threat_num++;
         rounds_complete = 0;
+        is_threat_waiting = true;
+    }
+
+    // Don't allow the round to start if the threat has
+    // not been passed by the prior player
+    if (is_threat_waiting) {
+        return ROUND_STATE_START;
     }
 
     // Wait for the player to see the screen using the
@@ -355,7 +434,7 @@ int start_round_func() {
     rounds_complete++;
 
     // Start the timer for the current round
-    round_begin_ms = millis();
+    start_timer();
 
     if (DEBUG) {
         expected_shape = SHAPE_SQUARE;
@@ -372,47 +451,77 @@ int start_round_func() {
     return ROUND_STATE_RUNNING;
 }
 
-int running_round_func() {
-    // Ping every sonar device
-    for (int i = 0; i < SONAR_PINC; i++) {
-        int pin = SONAR_PINS[i];
-        float rtt = sonar_rtt(pin);
-
-        float delta = sonar_rtt_means[i] - rtt;
-        float stdev = sonar_rtt_stdev[i];
-
-        // If the difference between the initial value
-        // and the value read is greater than x standard deviations
-        // then there's a good chance something has passed the sensor
-        if (delta > stdev) {
-            int mapped_shape = SONAR_IDX_SHAPE_MAP[i];
-            bool correct = mapped_shape == expected_shape;
-
-            // If correct, let the app know about it
-            // Otherwise, decrement the number of lives
+int get_input_status() {
+    if (is_cpu) {
+        bool provide_input = random(INPUT_CHANCE_DEN) < INPUT_CHANCE_NUM;
+        if (provide_input) {
+            bool correct = random(INPUT_CORRECT_DEN) < INPUT_CORRECT_NUM;
             if (correct) {
-                send_input_status(IN_STATUS_CORRECT);
+                return IN_STATUS_CORRECT;
             } else {
-                lives_remaining--;
+                return IN_STATUS_INCORRECT;
+            }
+        } else {
+            return IN_STATUS_TIME_OUT; // take as no input given
+        }
+    } else {
+        // Ping every sonar device
+        for (int i = 0; i < SONAR_PINC; i++) {
+            int pin = SONAR_PINS[i];
+            float rtt = sonar_rtt(pin);
 
-                // If no lives left, lose the game
-                // and then flag the state machine to exit
-                if (lives_remaining == 0) {
-                    // Notify the app
-                    send_end_game(END_GAME_LOSE);
-                    end_state = END_STATE_LOSE;
+            float delta = sonar_rtt_means[i] - rtt;
+            float stdev = sonar_rtt_stdev[i];
+
+            // If the difference between the initial value
+            // and the value read is greater than x standard deviations
+            // then there's a good chance something has passed the sensor
+            if (delta > stdev) {
+                int mapped_shape = SONAR_IDX_SHAPE_MAP[i];
+                bool correct = mapped_shape == expected_shape;
+
+                if (correct) {
+                    return IN_STATUS_CORRECT;
                 } else {
-                    // Otherwise, let the app know the input was incorrect
-                    send_input_status(IN_STATUS_INCORRECT);
+                    return IN_STATUS_INCORRECT;
                 }
             }
-
-            // Input response must be immediate and start a timer
-            // to await the app to show whatever screen comes up next
-            // ROUND_STATE_END to handle next action
-            round_begin_ms = millis();
-            return ROUND_STATE_END;
         }
+
+        return IN_STATUS_TIME_OUT;
+    }
+}
+
+int running_round_func() {
+    int input_status = get_input_status();
+
+    if (input_status != IN_STATUS_TIME_OUT) {
+        // If correct, let the app know about it
+        // Otherwise, decrement the number of lives
+        if (input_status == IN_STATUS_CORRECT) {
+            send_input_status(input_status);
+        } else if (input_status == IN_STATUS_INCORRECT) {
+            lives_remaining--;
+
+            // If no lives left, lose the game
+            // and then flag the state machine to exit
+            if (lives_remaining == 0) {
+                // Notify the app
+                send_end_game(END_GAME_LOSE);
+                end_state = END_STATE_LOSE;
+            } else {
+                // Otherwise, let the app know the input was incorrect
+                send_input_status(input_status);
+
+                // TODO: Reset the threat
+            }
+        }
+
+        // Input response must be immediate and start a timer
+        // to await the app to show whatever screen comes up next
+        // ROUND_STATE_END to handle next action
+        start_timer();
+        return ROUND_STATE_END;
     }
 
     // Timeout code, if nothing passed through the sensor, then
@@ -436,7 +545,7 @@ int running_round_func() {
             send_input_status(IN_STATUS_TIME_OUT);
         }
 
-        round_begin_ms = cur_ms;
+        start_timer();
         return ROUND_STATE_END;
     }
 
@@ -480,14 +589,23 @@ int running_game_func() {
 }
 
 int end_game_func() {
+    if (end_state != END_STATE_NOTIFIED) {
+        send_game_reset();
+    }
+  
     // Cleanup and reset state for the next game
+    is_cpu = false;
+    is_threat_waiting = false;
+
     end_state = END_STATE_PROCEED;
+    
     threat_num = 0;
+    rounds_req = INITIAL_ROUNDS_REQ;
     rounds_complete = INITIAL_ROUNDS_REQ;
+    round_state = ROUND_STATE_START;
+    
     cur_round_limit_ms = INITIAL_ROUND_LIMIT_MS;
     lives_remaining = INITIAL_LIVES;
-
-    send_game_reset();
 
     return GAME_STATE_AWAIT_START;
 }

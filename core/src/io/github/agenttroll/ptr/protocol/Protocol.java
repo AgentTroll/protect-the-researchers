@@ -1,6 +1,9 @@
 package io.github.agenttroll.ptr.protocol;
 
 import io.github.agenttroll.ptr.protocol.in.*;
+import io.github.agenttroll.ptr.protocol.out.CpuNotifMsg;
+import io.github.agenttroll.ptr.protocol.out.GameEndMsg;
+import io.github.agenttroll.ptr.protocol.out.ThreatProceedMsg;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -29,7 +32,9 @@ public class Protocol {
         insertInPacket(5, EndGameMsg.class);
         insertInPacket(6, GameResetMsg.class);
 
-        // outPackets.put(WindowBeginMsg.class, 0);
+        outPackets.put(CpuNotifMsg.class, 0);
+        outPackets.put(ThreatProceedMsg.class, 1);
+        outPackets.put(GameEndMsg.class, 2);
     }
 
     // Shortcut method to locate the default constructor

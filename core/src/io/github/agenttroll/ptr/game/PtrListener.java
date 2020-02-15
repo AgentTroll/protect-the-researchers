@@ -2,8 +2,11 @@ package io.github.agenttroll.ptr.game;
 
 import io.github.agenttroll.ptr.comm.MessageHandler;
 import io.github.agenttroll.ptr.comm.Remote;
+import io.github.agenttroll.ptr.platform.Platform;
 import io.github.agenttroll.ptr.protocol.InMsg;
 import io.github.agenttroll.ptr.protocol.in.*;
+
+import java.util.Arrays;
 
 // NOT THREAD-SAFE
 // This class should be called on the GUI thread
@@ -19,19 +22,25 @@ public class PtrListener implements MessageHandler {
 
     @Override
     public void handle(Remote remote, InMsg msg) {
+        if (Platform.DEBUG) {
+            System.out.printf("DEBUG: RECV '%s' FROM %s%n", msg.getClass().getSimpleName(),
+                    remote.getPortId());
+        }
+
         if (msg instanceof InputStatusMsg) {
             if (!this.filterPhase(GamePhase.RUNNING)) {
                 return;
             }
 
             InputStatusMsg input = (InputStatusMsg) msg;
-            this.game.handleInput(input);
+            this.game.handleInput(remote, input);
         }
 
         if (msg instanceof ErrorMsg) {
             ErrorMsg error = (ErrorMsg) msg;
 
-            RuntimeException ex = new RuntimeException("Arduino error occurred (ec = " + error.getErrorCode() + ")");
+            RuntimeException ex = new RuntimeException("Arduino error occurred (ec = " + error.getErrorCode() + ") on " +
+                    remote.getPortId());
             ex.printStackTrace();
         }
 
@@ -40,15 +49,7 @@ public class PtrListener implements MessageHandler {
                 return;
             }
 
-            this.game.handleStartGame((StartGameMsg) msg);
-        }
-
-        if (msg instanceof StartRoundMsg) {
-            if (!this.filterPhase(GamePhase.RUNNING)) {
-                return;
-            }
-
-            this.game.handleStartRound();
+            this.game.handleStartGame(remote, (StartGameMsg) msg);
         }
 
         if (msg instanceof StartThreatMsg) {
@@ -56,7 +57,15 @@ public class PtrListener implements MessageHandler {
                 return;
             }
 
-            this.game.handleStartThreat();
+            this.game.handleStartThreat(remote);
+        }
+
+        if (msg instanceof StartRoundMsg) {
+            if (!this.filterPhase(GamePhase.RUNNING)) {
+                return;
+            }
+
+            this.game.handleStartRound(remote);
         }
 
         if (msg instanceof EndGameMsg) {
@@ -64,7 +73,7 @@ public class PtrListener implements MessageHandler {
                 return;
             }
 
-            this.game.handleEndGame((EndGameMsg) msg);
+            this.game.handleEndGame(remote, (EndGameMsg) msg);
         }
 
         if (msg instanceof GameResetMsg) {
@@ -86,6 +95,9 @@ public class PtrListener implements MessageHandler {
                 return true;
             }
         }
+
+        RuntimeException ex = new RuntimeException("Unexpected phase " + cur + " when it should be " + Arrays.toString(phases));
+        ex.printStackTrace();
 
         return false;
     }
