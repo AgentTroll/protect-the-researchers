@@ -65,7 +65,7 @@ public class PtrListener implements MessageHandler {
                 return;
             }
 
-            this.game.handleStartRound(remote);
+            this.game.handleStartRound(remote, (StartRoundMsg) msg);
         }
 
         if (msg instanceof EndGameMsg) {

@@ -5,17 +5,26 @@ import io.github.agenttroll.ptr.platform.Platform;
 import io.github.agenttroll.ptr.protocol.in.EndGameMsg;
 import io.github.agenttroll.ptr.protocol.in.InputStatusMsg;
 import io.github.agenttroll.ptr.protocol.in.StartGameMsg;
+import io.github.agenttroll.ptr.protocol.in.StartRoundMsg;
 import io.github.agenttroll.ptr.protocol.out.CpuNotifMsg;
 import io.github.agenttroll.ptr.protocol.out.GameEndMsg;
 import io.github.agenttroll.ptr.protocol.out.ThreatProceedMsg;
 import io.github.agenttroll.ptr.scene.*;
 
+import java.util.IdentityHashMap;
+import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
+
 // State-holder class to pass around to the listeners
 // and different scenes that will be utilized to show
 // the graphics on the screen
 public class Game {
+    private static final String[] THREAT_NAMES = { "DIAMOND RAIN", "WIND STORM", "ROUGH SEAS" };
     private final Remote leftRemote;
     private final Remote rightRemote;
+
+    private final Map<Remote, PlayerData> playerData =
+            new IdentityHashMap<>();
 
     private GamePhase phase;
     private GameMode mode;
@@ -23,10 +32,14 @@ public class Game {
     private Scene currentScene;
 
     private Remote currentWaitingRemote;
+    private int currentThreatIdx;
 
     public Game(Remote leftRemote, Remote rightRemote) {
         this.leftRemote = leftRemote;
         this.rightRemote = rightRemote;
+
+        this.playerData.put(this.leftRemote, new PlayerData());
+        this.playerData.put(this.rightRemote, new PlayerData());
 
         if (Platform.DEBUG) {
             System.out.printf("DEBUG: LEFT=%s RIGHT=%s%n",
@@ -147,8 +160,11 @@ public class Game {
             // The other player has finished their threat
             // since the new remote has caught up, they can now both break
             // out of the wait loop
-            this.setRemoteScreen(this.getLeftRemote(), new TextDebugScreen("NEW THREAT"));
-            this.setRemoteScreen(this.getRightRemote(), new TextDebugScreen("NEW THREAT"));
+            this.currentThreatIdx = ThreadLocalRandom.current().nextInt(THREAT_NAMES.length);
+            String threatName = THREAT_NAMES[this.currentThreatIdx];
+
+            this.setRemoteScreen(this.getLeftRemote(), new TextDebugScreen(threatName));
+            this.setRemoteScreen(this.getRightRemote(), new TextDebugScreen(threatName));
             this.currentWaitingRemote = null;
 
             ThreatProceedMsg msg = new ThreatProceedMsg();
@@ -157,16 +173,23 @@ public class Game {
         }
     }
 
-    public void handleStartRound(Remote source) {
-        // TODO: Needs health
-
-        this.setRemoteScreen(source, new TextDebugScreen("INPUT REQUIRED"));
+    public void handleStartRound(Remote source, StartRoundMsg msg) {
+        int livesRemaining = msg.getLivesRemaining();
+        this.playerData.get(source).setLivesRemaining(livesRemaining);
+        this.setRemoteScreen(source, new TextDebugScreen("INPUT REQUIRED (" + livesRemaining + " lives remaining)"));
     }
 
     public void handleInput(Remote source, InputStatusMsg msg) {
-        // TODO: Needs health
+        PlayerData data = this.playerData.get(source);
+        int lives = data.getLivesRemaining();
 
-        this.setRemoteScreen(source, new TextDebugScreen(msg.getStatus().name()));
+        // If not correct, subtract and update
+        if (msg.getStatus() != InputStatus.CORRECT) {
+            lives--;
+            data.setLivesRemaining(lives);
+        }
+
+        this.setRemoteScreen(source, new TextDebugScreen(msg.getStatus().name() + " (" + lives + " lives remaining)"));
     }
 
     // Handles end game signal when someone wins or loses

@@ -86,8 +86,9 @@ static void send_start_game(bool single_player) {
 
 // Indicates to the app that a new round for a single
 // input has started
-static void send_start_round() {
-    Serial.println("3");
+static void send_start_round(int lives_remaining) {
+    String lives_remaining_str = String(lives_remaining);
+    Serial.println("3 " + lives_remaining_str);
 }
 
 // Indicates that a new threat (set of rounds) has started
@@ -246,6 +247,7 @@ static const int SINGLE_PLAYER_BTN_PIN = 4;
 static const int SONAR_PINC = 1;
 const int SONAR_PINS[] = { 10 };
 const int SONAR_IDX_SHAPE_MAP[] = { SHAPE_SQUARE };
+const int LED_PINS[] = { 0, 0, 0, 0 };
 static const double STDEV_MUL = 5;
 
 static const int GAME_STATE_AWAIT_START = -1;
@@ -447,7 +449,7 @@ int start_round_func() {
     }
 
     // Let the app know a new round has started
-    send_start_round();
+    send_start_round(lives_remaining);
 
     return ROUND_STATE_RUNNING;
 }
