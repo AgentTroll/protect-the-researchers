@@ -161,7 +161,7 @@ static void ingest_packets() {
 // --------------- Sonar handling -----------------
 
 // 3000 usec timeout, ultrasound stops working too well sometime around 2500 usec
-static const int PULSE_MAX_WAIT_USEC = 3000;
+static const int PULSE_MAX_WAIT_USEC = 1300;
 static const int SONAR_SAMPLE_SIZE = 20;
 
 // Sends a ping and measures the RTT for the ping
@@ -203,9 +203,9 @@ static const int PLAYER_LEFT = 0;
 static const int PLAYER_RIGHT = 1;
 
 static const int SHAPE_SQUARE = 0;
-static const int SHAPE_CIRCLE = 1;
+static const int SHAPE_STAR = 1;
 static const int SHAPE_TRIANGLE = 2;
-static const int SHAPE_STAR = 3;
+static const int SHAPE_HEXAGON = 3;
 
 static const bool SINGLE_PLAYER = true;
 static const bool MULTI_PLAYER = false;
@@ -241,13 +241,13 @@ static bool check_btn(int pin, bool *active_state) {
 // ---------------- Arduino program -------------------
 
 static const long BAUD = 2000000;
-static const bool DEBUG = true;
+static const bool DEBUG = false;
 
 static const int SINGLE_PLAYER_BTN_PIN = 4;
-static const int SONAR_PINC = 1;
-const int SONAR_PINS[] = { 10 };
-const int SONAR_IDX_SHAPE_MAP[] = { SHAPE_SQUARE };
-const int LED_PINS[] = { 0, 0, 0, 0 };
+static const int SONAR_PINC = 4;
+const int SONAR_PINS[] = { 11, 10, 12, 3 };
+const int SONAR_IDX_SHAPE_MAP[] = { SHAPE_SQUARE, SHAPE_STAR, SHAPE_TRIANGLE, SHAPE_HEXAGON };
+const int LED_PINS[] = { 8, 7, 6, 5 };
 static const double STDEV_MUL = 5;
 
 static const int GAME_STATE_AWAIT_START = -1;
@@ -302,6 +302,43 @@ void setup() {
     Serial.begin(BAUD);
 
     pinMode(SINGLE_PLAYER_BTN_PIN, INPUT);
+
+    for (int i = 0; i < SONAR_PINC; i++) {
+        pinMode(LED_PINS[i], OUTPUT);
+        digitalWrite(LED_PINS[i], LOW);
+    }
+
+    while (false) {
+        int status = -1;
+        for (int i = 0; i < 4; i++) {
+            int pin = SONAR_PINS[i];
+            float rtt = sonar_rtt(pin);
+
+            float delta = sonar_rtt_means[i] - rtt;
+            float stdev = sonar_rtt_stdev[i];
+
+            // Serial.println(String(i) + ": delta=" + String(delta) + " stdev=" + String(stdev) + " means=" + String(sonar_rtt_means[i]) + " sample=" + String(rtt));
+
+            // If the difference between the initial value
+            // and the value read is greater than x standard deviations
+            // then there's a good chance something has passed the sensor
+            // if (delta > stdev) {
+            if (rtt > 0) {
+                int mapped_shape = SONAR_IDX_SHAPE_MAP[i];
+                bool correct = mapped_shape == expected_shape;
+
+                if (correct) {
+                    status = IN_STATUS_CORRECT;
+                } else {
+                    status = IN_STATUS_INCORRECT;
+                }
+                break;
+            }
+        }
+
+        Serial.println(status);
+        delay(1000);
+    }
 
     // Let console know we're in debug mode, just in case
     if (DEBUG) {
@@ -448,6 +485,13 @@ int start_round_func() {
         expected_shape = random(4);
     }
 
+    // Light up the right LED
+    for (int i = 0; i < SONAR_PINC; i++) {
+        if (SONAR_IDX_SHAPE_MAP[i] == expected_shape) {
+            digitalWrite(LED_PINS[i], HIGH);
+        }
+    }
+
     // Let the app know a new round has started
     send_start_round(lives_remaining);
 
@@ -479,9 +523,13 @@ int get_input_status() {
             // If the difference between the initial value
             // and the value read is greater than x standard deviations
             // then there's a good chance something has passed the sensor
-            if (delta > stdev) {
+            // if (delta > stdev) {
+            if (rtt > 100) {
                 int mapped_shape = SONAR_IDX_SHAPE_MAP[i];
                 bool correct = mapped_shape == expected_shape;
+
+send_error_packet(i);
+send_error_packet((int) rtt);
 
                 if (correct) {
                     return IN_STATUS_CORRECT;
@@ -556,6 +604,12 @@ int running_round_func() {
 }
 
 int end_round_func() {
+    // Turn off all LEDs
+    for (int i = 0; i < SONAR_PINC; i++) {
+        pinMode(LED_PINS[i], OUTPUT);
+        digitalWrite(LED_PINS[i], LOW);
+    }
+    
     // Wait for a few seconds to allow players to see anything
     // from the app and prepare for the next round
     long cur_ms = millis();
