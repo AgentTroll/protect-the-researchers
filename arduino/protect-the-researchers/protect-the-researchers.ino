@@ -308,38 +308,6 @@ void setup() {
         digitalWrite(LED_PINS[i], LOW);
     }
 
-    while (false) {
-        int status = -1;
-        for (int i = 0; i < 4; i++) {
-            int pin = SONAR_PINS[i];
-            float rtt = sonar_rtt(pin);
-
-            float delta = sonar_rtt_means[i] - rtt;
-            float stdev = sonar_rtt_stdev[i];
-
-            // Serial.println(String(i) + ": delta=" + String(delta) + " stdev=" + String(stdev) + " means=" + String(sonar_rtt_means[i]) + " sample=" + String(rtt));
-
-            // If the difference between the initial value
-            // and the value read is greater than x standard deviations
-            // then there's a good chance something has passed the sensor
-            // if (delta > stdev) {
-            if (rtt > 0) {
-                int mapped_shape = SONAR_IDX_SHAPE_MAP[i];
-                bool correct = mapped_shape == expected_shape;
-
-                if (correct) {
-                    status = IN_STATUS_CORRECT;
-                } else {
-                    status = IN_STATUS_INCORRECT;
-                }
-                break;
-            }
-        }
-
-        Serial.println(status);
-        delay(1000);
-    }
-
     // Let console know we're in debug mode, just in case
     if (DEBUG) {
         send_error_packet(DEBUG_MODE);
@@ -524,12 +492,9 @@ int get_input_status() {
             // and the value read is greater than x standard deviations
             // then there's a good chance something has passed the sensor
             // if (delta > stdev) {
-            if (rtt > 100) {
+            if (rtt > 0) {
                 int mapped_shape = SONAR_IDX_SHAPE_MAP[i];
                 bool correct = mapped_shape == expected_shape;
-
-send_error_packet(i);
-send_error_packet((int) rtt);
 
                 if (correct) {
                     return IN_STATUS_CORRECT;
@@ -537,6 +502,11 @@ send_error_packet((int) rtt);
                     return IN_STATUS_INCORRECT;
                 }
             }
+
+            // Pause to prevent latent ultrasound pulse
+            // from being detected by sensors opposite to
+            // one another
+            delay(1);
         }
 
         return IN_STATUS_TIME_OUT;
