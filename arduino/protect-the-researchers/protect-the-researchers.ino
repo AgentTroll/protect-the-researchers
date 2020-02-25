@@ -59,6 +59,7 @@ static String bool_to_str(bool b) {
     return b ? TRUE_STR : FALSE_STR;
 }
 
+// Convert a "true" or "false" string to bool
 static bool str_to_bool(String str) {
     return str == TRUE_STR;
 }
@@ -104,6 +105,8 @@ static void send_end_game(bool win) {
     Serial.println("5 " + win_str);
 }
 
+// Indicates that the game should be reset and the game
+// state stored by the app should be cleared
 static void send_game_reset() {
     Serial.println("6");
 }
@@ -244,9 +247,9 @@ static const long BAUD = 2000000;
 static const bool DEBUG = false;
 
 static const int SINGLE_PLAYER_BTN_PIN = 4;
-static const int SONAR_PINC = 4;
+static const int SLOT_COUNT = 4;
 const int SONAR_PINS[] = { 11, 10, 12, 3 };
-const int SONAR_IDX_SHAPE_MAP[] = { SHAPE_SQUARE, SHAPE_STAR, SHAPE_TRIANGLE, SHAPE_HEXAGON };
+const int SHAPE_IDX_MAP[] = { SHAPE_SQUARE, SHAPE_STAR, SHAPE_TRIANGLE, SHAPE_HEXAGON };
 const int LED_PINS[] = { 8, 7, 6, 5 };
 static const double STDEV_MUL = 5;
 
@@ -277,8 +280,8 @@ static const long INPUT_CHANCE_DEN = 30000;
 static const long INPUT_CORRECT_NUM = 50;
 static const long INPUT_CORRECT_DEN = 100;
 
-double sonar_rtt_means[SONAR_PINC] = {};
-double sonar_rtt_stdev[SONAR_PINC] = {};
+double sonar_rtt_means[SLOT_COUNT] = {};
+double sonar_rtt_stdev[SLOT_COUNT] = {};
 
 bool is_cpu = false;
 bool is_threat_waiting = false;
@@ -303,7 +306,7 @@ void setup() {
 
     pinMode(SINGLE_PLAYER_BTN_PIN, INPUT);
 
-    for (int i = 0; i < SONAR_PINC; i++) {
+    for (int i = 0; i < SLOT_COUNT; i++) {
         pinMode(LED_PINS[i], OUTPUT);
         digitalWrite(LED_PINS[i], LOW);
     }
@@ -386,7 +389,7 @@ int start_game_func() {
 
     // Resample the unobstructed ultrasound at the beginning
     // of the game, just in case
-    for (int i = 0; i < SONAR_PINC; i++) {
+    for (int i = 0; i < SLOT_COUNT; i++) {
         sonar_rtt_sample(SONAR_PINS[i],
                 sonar_rtt_means + i,
                 sonar_rtt_stdev + i);
@@ -454,8 +457,8 @@ int start_round_func() {
     }
 
     // Light up the right LED
-    for (int i = 0; i < SONAR_PINC; i++) {
-        if (SONAR_IDX_SHAPE_MAP[i] == expected_shape) {
+    for (int i = 0; i < SLOT_COUNT; i++) {
+        if (SHAPE_IDX_MAP[i] == expected_shape) {
             digitalWrite(LED_PINS[i], HIGH);
         }
     }
@@ -481,19 +484,20 @@ int get_input_status() {
         }
     } else {
         // Ping every sonar device
-        for (int i = 0; i < SONAR_PINC; i++) {
+        for (int i = 0; i < SLOT_COUNT; i++) {
             int pin = SONAR_PINS[i];
             float rtt = sonar_rtt(pin);
 
             float delta = sonar_rtt_means[i] - rtt;
             float stdev = sonar_rtt_stdev[i];
 
-            // If the difference between the initial value
-            // and the value read is greater than x standard deviations
-            // then there's a good chance something has passed the sensor
+            // The sensor reads as 0 if the timeout occurs
+            // therefore, if there is anything in front of
+            // the sensor, it will return the pulse time
+            // which will be a non-zero number
             // if (delta > stdev) {
             if (rtt > 0) {
-                int mapped_shape = SONAR_IDX_SHAPE_MAP[i];
+                int mapped_shape = SHAPE_IDX_MAP[i];
                 bool correct = mapped_shape == expected_shape;
 
                 if (correct) {
@@ -575,7 +579,7 @@ int running_round_func() {
 
 int end_round_func() {
     // Turn off all LEDs
-    for (int i = 0; i < SONAR_PINC; i++) {
+    for (int i = 0; i < SLOT_COUNT; i++) {
         pinMode(LED_PINS[i], OUTPUT);
         digitalWrite(LED_PINS[i], LOW);
     }

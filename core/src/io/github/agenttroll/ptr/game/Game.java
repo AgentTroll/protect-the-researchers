@@ -146,6 +146,8 @@ public class Game {
         }
     }
 
+    // Handles the beginning of a new threat and the following
+    // string of inputs needed
     public void handleStartThreat(Remote source) {
         // TODO: What happens when they cannot pass the threat and the current
         // threat goes out of sync?
@@ -173,12 +175,14 @@ public class Game {
         }
     }
 
+    // Handles the beginning of the input window
     public void handleStartRound(Remote source, StartRoundMsg msg) {
         int livesRemaining = msg.getLivesRemaining();
         this.playerData.get(source).setLivesRemaining(livesRemaining);
         this.setRemoteScreen(source, new TextDebugScreen("INPUT REQUIRED (" + livesRemaining + " lives remaining)"));
     }
 
+    // Handles the input being detected and processed by the game
     public void handleInput(Remote source, InputStatusMsg msg) {
         PlayerData data = this.playerData.get(source);
         int lives = data.getLivesRemaining();
