@@ -164,7 +164,7 @@ static void ingest_packets() {
 // --------------- Sonar handling -----------------
 
 // 3000 usec timeout, ultrasound stops working too well sometime around 2500 usec
-static const int PULSE_MAX_WAIT_USEC = 1300;
+static const int PULSE_MAX_WAIT_USEC = 1500;
 static const int SONAR_SAMPLE_SIZE = 20;
 
 // Sends a ping and measures the RTT for the ping
@@ -191,6 +191,10 @@ static void sonar_rtt_sample(int pin, double *mean, double *stdev) {
         float rtt = sonar_rtt(pin);
         *mean += rtt;
         sample_data[i] = rtt;
+
+        // Something to do with pulse rtt from the last round
+        // interfering with the measurement sometimes
+        delay(1);
     }
     *mean /= SONAR_SAMPLE_SIZE;
 
@@ -246,12 +250,13 @@ static bool check_btn(int pin, bool *active_state) {
 static const long BAUD = 2000000;
 static const bool DEBUG = false;
 
-static const int SINGLE_PLAYER_BTN_PIN = 4;
+static const int SINGLE_PLAYER_BTN_PIN = 12;
 static const int SLOT_COUNT = 4;
-const int SONAR_PINS[] = { 11, 10, 12, 3 };
+const int SONAR_PINS[] = { 7, 6, 5, 4 };
 const int SHAPE_IDX_MAP[] = { SHAPE_SQUARE, SHAPE_STAR, SHAPE_TRIANGLE, SHAPE_HEXAGON };
-const int LED_PINS[] = { 8, 7, 6, 5 };
+const int LED_PINS[] = { 11, 10, 9, 8 };
 static const double STDEV_MUL = 5;
+static const float DELTA_THRESH = 100;
 
 static const int GAME_STATE_AWAIT_START = -1;
 static const int GAME_STATE_START = 0;
@@ -281,7 +286,7 @@ static const long INPUT_CORRECT_NUM = 50;
 static const long INPUT_CORRECT_DEN = 100;
 
 double sonar_rtt_means[SLOT_COUNT] = {};
-double sonar_rtt_stdev[SLOT_COUNT] = {};
+double sonar_rtt_stdev[SLOT_COUNT] = {}; // Unused, this turns out to be really unreliable
 
 bool is_cpu = false;
 bool is_threat_waiting = false;
@@ -495,8 +500,7 @@ int get_input_status() {
             // therefore, if there is anything in front of
             // the sensor, it will return the pulse time
             // which will be a non-zero number
-            // if (delta > stdev) {
-            if (rtt > 0) {
+            if (delta > DELTA_THRESH) {
                 int mapped_shape = SHAPE_IDX_MAP[i];
                 bool correct = mapped_shape == expected_shape;
 
@@ -506,11 +510,6 @@ int get_input_status() {
                     return IN_STATUS_INCORRECT;
                 }
             }
-
-            // Pause to prevent latent ultrasound pulse
-            // from being detected by sensors opposite to
-            // one another
-            delay(1);
         }
 
         return IN_STATUS_TIME_OUT;
