@@ -15,11 +15,13 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
+// TODO: Remove usages of TextDebugScene
+// TODO: Figure out multiplayer
+
 // State-holder class to pass around to the listeners
 // and different scenes that will be utilized to show
 // the graphics on the screen
 public class Game {
-    private static final String[] THREAT_NAMES = { "DIAMOND RAIN", "WIND STORM", "ROUGH SEAS" };
     private final Remote leftRemote;
     private final Remote rightRemote;
 
@@ -32,7 +34,7 @@ public class Game {
     private Scene currentScene;
 
     private Remote currentWaitingRemote;
-    private int currentThreatIdx;
+    private Threat threat;
 
     public Game(Remote leftRemote, Remote rightRemote) {
         this.leftRemote = leftRemote;
@@ -121,22 +123,35 @@ public class Game {
     // Handles the start game signal when the player decides
     // which game mode to play
     public void handleStartGame(Remote source, StartGameMsg msg) {
+        GameMode newMode = msg.getMode();
+        if (newMode == GameMode.CREDITS) {
+            GamePhase currentPhase = this.getPhase();
+            if (currentPhase == GamePhase.CREDITS) {
+                this.setCurrentScene(new MenuScene());
+                this.setPhase(GamePhase.START);
+            } else {
+                this.setCurrentScene(new CreditsScene());
+                this.setPhase(GamePhase.CREDITS);
+            }
+
+            return;
+        }
+
         // Set game phase, scene and mode
         this.setPhase(GamePhase.RUNNING);
         this.setCurrentScene(new SplitScene());
 
-        GameMode mode = msg.getMode();
-        this.setMode(mode);
+        this.setMode(newMode);
 
         // Update the screens
         // If single player, let the player know which side of the screen he is on
         // If multiplayer, show the correct side for each arduino
-        if (mode == GameMode.SINGLE_PLAYER) {
+        if (newMode == GameMode.SINGLE_PLAYER) {
             this.singlePlayerRemote = source;
-            this.setRemoteScreen(this.singlePlayerRemote, new SinglePlayerStartScene(true));
+            this.setRemoteScreen(this.singlePlayerRemote, new TextDebugScreen("You"));
 
             Remote cpuRemote = this.getOtherRemote(this.singlePlayerRemote);
-            this.setRemoteScreen(cpuRemote, new SinglePlayerStartScene(false));
+            this.setRemoteScreen(cpuRemote, new TextDebugScreen("Computer"));
 
             // Let the computer arduino know
             cpuRemote.sendPacket(new CpuNotifMsg());
@@ -149,9 +164,6 @@ public class Game {
     // Handles the beginning of a new threat and the following
     // string of inputs needed
     public void handleStartThreat(Remote source) {
-        // TODO: What happens when they cannot pass the threat and the current
-        // threat goes out of sync?
-
         if (this.currentWaitingRemote == null) {
             // No players are waiting, so this arduino is the first to
             // finish the threat. Wait here.
@@ -162,11 +174,11 @@ public class Game {
             // The other player has finished their threat
             // since the new remote has caught up, they can now both break
             // out of the wait loop
-            this.currentThreatIdx = ThreadLocalRandom.current().nextInt(THREAT_NAMES.length);
-            String threatName = THREAT_NAMES[this.currentThreatIdx];
+            int currentThreatIdx = ThreadLocalRandom.current().nextInt(Threat.values().length);
+            this.threat = Threat.values()[currentThreatIdx];
 
-            this.setRemoteScreen(this.getLeftRemote(), new TextDebugScreen(threatName));
-            this.setRemoteScreen(this.getRightRemote(), new TextDebugScreen(threatName));
+            this.setPhase(GamePhase.NEW_THREAT);
+            this.setCurrentScene(new StartThreatScene(threat));
             this.currentWaitingRemote = null;
 
             ThreatProceedMsg msg = new ThreatProceedMsg();
@@ -177,9 +189,21 @@ public class Game {
 
     // Handles the beginning of the input window
     public void handleStartRound(Remote source, StartRoundMsg msg) {
+        if (this.getPhase() == GamePhase.NEW_THREAT) {
+            BackgroundedSplitScreen scene = new BackgroundedSplitScreen();
+
+            AnimatedSingleScene background = new AnimatedSingleScene(threat.getAssetName(), threat.getAtlasPath());
+            scene.setBackground(background);
+
+            this.setCurrentScene(scene);
+            this.setPhase(GamePhase.RUNNING);
+        }
+
         int livesRemaining = msg.getLivesRemaining();
-        this.playerData.get(source).setLivesRemaining(livesRemaining);
-        this.setRemoteScreen(source, new TextDebugScreen("INPUT REQUIRED (" + livesRemaining + " lives remaining)"));
+
+        PlayerData data = this.playerData.get(source);
+        data.setLivesRemaining(livesRemaining);
+        this.setRemoteScreen(source, new InputScene(data, msg));
     }
 
     // Handles the input being detected and processed by the game
@@ -193,7 +217,7 @@ public class Game {
             data.setLivesRemaining(lives);
         }
 
-        this.setRemoteScreen(source, new TextDebugScreen(msg.getStatus().name() + " (" + lives + " lives remaining)"));
+        this.setRemoteScreen(source, new InputResponseScene(data, msg.getStatus() == InputStatus.CORRECT));
     }
 
     // Handles end game signal when someone wins or loses

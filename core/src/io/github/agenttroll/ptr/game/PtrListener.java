@@ -2,11 +2,12 @@ package io.github.agenttroll.ptr.game;
 
 import io.github.agenttroll.ptr.comm.MessageHandler;
 import io.github.agenttroll.ptr.comm.Remote;
-import io.github.agenttroll.ptr.platform.Platform;
 import io.github.agenttroll.ptr.protocol.InMsg;
 import io.github.agenttroll.ptr.protocol.in.*;
 
 import java.util.Arrays;
+
+import static io.github.agenttroll.ptr.game.GamePhase.*;
 
 // NOT THREAD-SAFE
 // This class should be called on the GUI thread
@@ -22,13 +23,8 @@ public class PtrListener implements MessageHandler {
 
     @Override
     public void handle(Remote remote, InMsg msg) {
-        if (Platform.DEBUG) {
-            System.out.printf("DEBUG: RECV '%s' FROM %s%n", msg.getClass().getSimpleName(),
-                    remote.getPortId());
-        }
-
         if (msg instanceof InputStatusMsg) {
-            if (!this.filterPhase(GamePhase.RUNNING)) {
+            if (!this.filterPhase(RUNNING)) {
                 return;
             }
 
@@ -45,7 +41,7 @@ public class PtrListener implements MessageHandler {
         }
 
         if (msg instanceof StartGameMsg) {
-            if (!this.filterPhase(GamePhase.START)) {
+            if (!this.filterPhase(START, CREDITS)) {
                 return;
             }
 
@@ -53,7 +49,7 @@ public class PtrListener implements MessageHandler {
         }
 
         if (msg instanceof StartThreatMsg) {
-            if (!this.filterPhase(GamePhase.RUNNING)) {
+            if (!this.filterPhase(RUNNING)) {
                 return;
             }
 
@@ -61,7 +57,7 @@ public class PtrListener implements MessageHandler {
         }
 
         if (msg instanceof StartRoundMsg) {
-            if (!this.filterPhase(GamePhase.RUNNING)) {
+            if (!this.filterPhase(RUNNING, NEW_THREAT)) {
                 return;
             }
 
@@ -69,7 +65,7 @@ public class PtrListener implements MessageHandler {
         }
 
         if (msg instanceof EndGameMsg) {
-            if (!this.filterPhase(GamePhase.RUNNING)) {
+            if (!this.filterPhase(RUNNING)) {
                 return;
             }
 
@@ -77,7 +73,7 @@ public class PtrListener implements MessageHandler {
         }
 
         if (msg instanceof GameResetMsg) {
-            if (!this.filterPhase(GamePhase.END)) {
+            if (!this.filterPhase(END)) {
                 return;
             }
 

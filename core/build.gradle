@@ -9,3 +9,30 @@ dependencies {
     compile 'com.fazecast:jSerialComm:[2.0.0,3.0.0)'
     compile "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
 }
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath "com.badlogicgames.gdx:gdx-tools:$gdxVersion"
+    }
+}
+
+import com.badlogic.gdx.tools.texturepacker.TexturePacker
+
+final ASSETS = "$projectDir/assets/"
+final OUTPUT = ASSETS + "Output/"
+task texturePacker {
+    doLast {
+        TexturePacker.Settings settings = new TexturePacker.Settings()
+        settings.maxHeight = 4096
+        settings.maxWidth = 4096
+        settings.fast = true
+        // TexturePacker.process(settings, ASSETS + "GameStart/Main", OUTPUT, "Main.atlas");
+        // TexturePacker.process(settings, ASSETS + "GameRunning/RoundRunning/DiamondRain", OUTPUT, "DiamondRain.atlas");
+        // TexturePacker.process(settings, ASSETS + "GameRunning/RoundRunning/RoughSea", OUTPUT, "RoughSea.atlas");
+        // TexturePacker.process(settings, ASSETS + "GameRunning/RoundRunning/WindStorm", OUTPUT, "WindStorm.atlas");
+    }
+}

@@ -1,5 +1,9 @@
 package io.github.agenttroll.ptr.game;
 
 public enum GamePhase {
-    START, RUNNING, END
+    START,
+    NEW_THREAT,
+    RUNNING,
+    END,
+    CREDITS
 }

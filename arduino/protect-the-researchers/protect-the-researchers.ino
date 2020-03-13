@@ -80,16 +80,18 @@ static void send_input_status(int in_status) {
 
 // Indicate to the app that the game state has changed to
 // switch screens to the correct game mode
-static void send_start_game(bool single_player) {
-    String sp_str = bool_to_str(single_player);
-    Serial.println("2 " + sp_str);
+static void send_start_game(int game_mode) {
+    String game_mode_str = String(game_mode);
+    Serial.println("2 " + game_mode_str);
 }
 
 // Indicates to the app that a new round for a single
 // input has started
-static void send_start_round(int lives_remaining) {
+static void send_start_round(int lives_remaining, int shape, long round_duration_millis) {
     String lives_remaining_str = String(lives_remaining);
-    Serial.println("3 " + lives_remaining_str);
+    String shape_str = String(shape);
+    String duration_str = String(round_duration_millis);
+    Serial.println("3 " + lives_remaining_str + " " + shape_str + " " + round_duration_millis);
 }
 
 // Indicates that a new threat (set of rounds) has started
@@ -164,7 +166,7 @@ static void ingest_packets() {
 // --------------- Sonar handling -----------------
 
 // 3000 usec timeout, ultrasound stops working too well sometime around 2500 usec
-static const int PULSE_MAX_WAIT_USEC = 1500;
+static const int PULSE_MAX_WAIT_USEC = 1000;
 static const int SONAR_SAMPLE_SIZE = 20;
 
 // Sends a ping and measures the RTT for the ping
@@ -224,27 +226,6 @@ static const int IN_STATUS_TIME_OUT = 2;
 static const bool END_GAME_WIN = true;
 static const bool END_GAME_LOSE = false;
 
-// ----------- Button state protection ------------
-
-bool single_player_btn = false;
-
-// Check button with hold-down guard
-// Basically, when the button is pressed, indicate that
-// the button is held until the button changes back to
-// unreleased to the loop() from reading multiple button
-// presses if the button is held down
-static bool check_btn(int pin, bool *active_state) {
-    int reading = digitalRead(pin);
-    if (reading == HIGH && !*active_state) {
-        *active_state = true;
-        return true;
-    } else if (reading == LOW) {
-        *active_state = false;
-    }
-
-    return false;
-}
-
 // ---------------- Arduino program -------------------
 
 static const long BAUD = 2000000;
@@ -265,7 +246,7 @@ static const int GAME_STATE_END = 2;
 
 static const int TOTAL_THREATS = 3;
 static const int INITIAL_ROUNDS_REQ = 5;
-static const int INITIAL_LIVES = 5;
+static const int INITIAL_LIVES = 3;
 
 static const int ROUND_STATE_START = 0;
 static const int ROUND_STATE_RUNNING = 1;
@@ -291,6 +272,7 @@ double sonar_rtt_stdev[SLOT_COUNT] = {}; // Unused, this turns out to be really 
 bool is_cpu = false;
 bool is_threat_waiting = false;
 
+bool is_credits = false;
 int game_state = GAME_STATE_AWAIT_START;
 int end_state = END_STATE_PROCEED;
 
@@ -342,7 +324,7 @@ static void handle_game_end(String components[]) {
     end_state = END_STATE_NOTIFIED;
 
     start_timer();
-    round_state = ROUND_STATE_END;
+    round_state = ROUND_STATE_EXIT;
 }
 
 // This looks a little unwieldy but trust me this is a lot easier to maintain
@@ -371,13 +353,34 @@ static void handle_game_end(String components[]) {
 // the hardware to keep time.
 
 int await_start_game_func() {
-    if (check_btn(SINGLE_PLAYER_BTN_PIN, &single_player_btn)) {
-        send_start_game(SINGLE_PLAYER);
-
-        start_timer();
-        return GAME_STATE_START;
+    for (int i = 0; i < SLOT_COUNT; i++) {
+        int pin = SONAR_PINS[i];
+        int rtt = sonar_rtt(pin);
+        if (rtt > 0) {
+            int shape = SHAPE_IDX_MAP[i];
+            if (shape == SHAPE_TRIANGLE) {
+                if (is_credits) {
+                    delay(250);
+                    is_credits = false;
+                    send_start_game(2);
+                } else {
+                    send_start_game(0);
+                    return GAME_STATE_START;
+                }
+            } else if (shape == SHAPE_SQUARE) {
+                if (!is_credits) {
+                    send_start_game(1);
+                    return GAME_STATE_START;
+                }
+            } else if (shape == SHAPE_STAR) {
+                if (!is_credits) {
+                    is_credits = true;
+                    send_start_game(2);
+                }
+            }
+        }
     }
-
+ 
     return GAME_STATE_AWAIT_START;
 }
 
@@ -469,7 +472,8 @@ int start_round_func() {
     }
 
     // Let the app know a new round has started
-    send_start_round(lives_remaining);
+    // TODO: Reduce round duration
+    send_start_round(lives_remaining, expected_shape, cur_round_limit_ms);
 
     return ROUND_STATE_RUNNING;
 }
@@ -500,7 +504,7 @@ int get_input_status() {
             // therefore, if there is anything in front of
             // the sensor, it will return the pulse time
             // which will be a non-zero number
-            if (delta > DELTA_THRESH) {
+            if (rtt > 0) {
                 int mapped_shape = SHAPE_IDX_MAP[i];
                 bool correct = mapped_shape == expected_shape;
 
@@ -537,7 +541,7 @@ int running_round_func() {
                 // Otherwise, let the app know the input was incorrect
                 send_input_status(input_status);
 
-                // TODO: Reset the threat
+                // TODO: Reset the threat?
             }
         }
 

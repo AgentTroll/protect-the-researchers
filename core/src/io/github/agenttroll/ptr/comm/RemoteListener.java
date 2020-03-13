@@ -8,6 +8,7 @@ import io.github.agenttroll.ptr.platform.Platform;
 import io.github.agenttroll.ptr.protocol.InMsg;
 import io.github.agenttroll.ptr.protocol.Protocol;
 
+import java.util.Arrays;
 import java.util.regex.Pattern;
 
 // THREAD-SAFE CLASS
@@ -75,6 +76,13 @@ public class RemoteListener implements SerialPortMessageListener {
 
             // Initialize packet with the information received
             InMsg msg = Protocol.decode(id, components);
+
+            if (Platform.DEBUG) {
+                System.out.printf("DEBUG: RECV '%s' (%s) FROM %s%n",
+                        msg.getClass().getSimpleName(),
+                        Arrays.toString(components),
+                        remote.getPortId());
+            }
 
             // Run the app handling code on the GUI thread to ensure safety
             Gdx.app.postRunnable(() -> this.listener.handle(this.remote, msg));

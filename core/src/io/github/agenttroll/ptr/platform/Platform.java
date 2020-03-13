@@ -10,6 +10,8 @@ public final class Platform {
     public static final int BAUD = 2_000_000;
     public static final boolean DEBUG = true;
 
+    public static final float ANIMATION_INTERVAL_SEC = 1F / 8;
+
     private Platform() {
     }
 

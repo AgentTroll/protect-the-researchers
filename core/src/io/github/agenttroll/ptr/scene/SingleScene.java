@@ -13,9 +13,8 @@ public class SingleScene implements Scene {
 
     @Override
     public void resize(int width, int height) {
-        Viewport leftViewport = this.stage.getViewport();
-        leftViewport.update(width, height, true);
-        leftViewport.setScreenSize(width, height);
+        Viewport viewport = this.stage.getViewport();
+        viewport.update(width, height, true);
     }
 
     @Override

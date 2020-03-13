@@ -8,15 +8,15 @@ import io.github.agenttroll.ptr.protocol.InMsg;
 // information
 
 // Format:
-// <bool:is single player>
+// <int:game mode>
 public class StartGameMsg extends InMsg {
     private final GameMode mode;
 
     public StartGameMsg(String[] components) {
         super(components);
 
-        boolean isSinglePlayer = Boolean.parseBoolean(components[0]);
-        this.mode = isSinglePlayer ? GameMode.SINGLE_PLAYER : GameMode.TWO_PLAYER;
+        int gameModeOrdinal = Integer.parseInt(components[0]);
+        this.mode = GameMode.values()[gameModeOrdinal];
     }
 
     public GameMode getMode() {

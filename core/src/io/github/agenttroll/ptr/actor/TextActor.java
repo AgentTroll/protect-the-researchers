@@ -10,14 +10,14 @@ import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 
 // Abstract actor superclass for text elements to be shown
-// on the stage using the Fira font bundled in the jar
+// on the stage using the font bundled in the jar
 public abstract class TextActor extends Actor {
     private static final BitmapFont FONT;
 
     static {
-        FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("FiraMono-Medium.ttf"));
+        FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("Fonts/SWTxt.ttf"));
         FreeTypeFontGenerator.FreeTypeFontParameter param = new FreeTypeFontGenerator.FreeTypeFontParameter();
-        param.size = 32;
+        param.size = 24;
 
         FONT = generator.generateFont(param);
         generator.dispose();
