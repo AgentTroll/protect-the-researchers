@@ -254,6 +254,7 @@ static const int ROUND_STATE_END = 2;
 static const int ROUND_STATE_EXIT = 3;
 
 static const long INITIAL_ROUND_LIMIT_MS = 5000;
+static const long ROUND_LIMIT_DECR_MS = 250;
 static const long ROUND_INTERIM_PAUSE_MS = 2000;
 
 static const int END_STATE_PROCEED = 0;
@@ -474,6 +475,7 @@ int start_round_func() {
     // Let the app know a new round has started
     // TODO: Reduce round duration
     send_start_round(lives_remaining, expected_shape, cur_round_limit_ms);
+    cur_round_limit_ms -= ROUND_LIMIT_DECR_MS;
 
     return ROUND_STATE_RUNNING;
 }
