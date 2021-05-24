@@ -38,12 +38,12 @@ use a dummy Arduino for the purposes of debugging.
 The desktop application can be built using the Gradle desktop:dist task.
 
 ``` shell
-git clone https://github.com/AgentTroll/protect-the-researchers.git
+git clone https://github.com/caojohnny/protect-the-researchers.git
 cd protect-the-researchers
 ./gradlew desktop:dist
 ```
 
-The initial build must be done with the [texture packer](https://github.com/AgentTroll/protect-the-researchers/blob/master/core/build.gradle#L33-L36) uncommented in order for the assets to load correctly
+The initial build must be done with the [texture packer](https://github.com/caojohnny/protect-the-researchers/blob/master/core/build.gradle#L33-L36) uncommented in order for the assets to load correctly
 in the desktop app.
 
 The Arduino code requires the Arduino program to be installed on your computer
